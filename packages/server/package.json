@@ -1,9 +1,8 @@
 {
-  "name": "@uni.js/core",
+  "name": "@uni.js/server",
   "version": "0.0.1",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
-  "repository": "https://github.com/uni-js/core",
   "author": "<854185073@qq.com>",
   "license": "MIT",
   "scripts": {
