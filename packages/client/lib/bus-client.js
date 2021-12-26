@@ -11,21 +11,25 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventBusClient = void 0;
 const inversify_1 = require("inversify");
+const socket_io_client_1 = require("socket.io-client");
 const event_1 = require("@uni.js/event");
+const MsgPackParser = require('socket.io-msgpack-parser');
 let EventBusClient = class EventBusClient extends event_1.GameEventEmitter {
-    constructor(socket) {
+    constructor(url) {
         super();
-        this.socket = socket;
-        this.socket.onAny((event, ...args) => {
+        const isDebug = Boolean(process.env['DEBUG']);
+        const option = isDebug ? {} : { parser: MsgPackParser };
+        this.client = (0, socket_io_client_1.io)(url, option);
+        this.client.onAny((event, ...args) => {
             this.emit(event, ...args);
         });
     }
     emitBusEvent(event) {
-        this.socket.emit(event.constructor.name, event);
+        this.client.emit(event.constructor.name, event);
     }
 };
 EventBusClient = __decorate([
     (0, inversify_1.injectable)(),
-    __metadata("design:paramtypes", [Object])
+    __metadata("design:paramtypes", [String])
 ], EventBusClient);
 exports.EventBusClient = EventBusClient;

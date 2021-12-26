@@ -17,7 +17,8 @@
     "@types/reflect-metadata": "^0.1.0"
   },
   "dependencies": {
-    "chalk": "4.1.2",
+    "@uni.js/utils": "^0.0.1",
+    "chalk": "^4.1.2",
     "eventemitter2": "^6.4.5",
     "inversify": "^6.0.1",
     "loglevel": "^1.8.0",

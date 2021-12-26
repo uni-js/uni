@@ -34,7 +34,7 @@ const inversify_2 = require("./inversify");
 const hooks_1 = require("./user-interface/hooks");
 const state_1 = require("./user-interface/state");
 const module_1 = require("./module");
-const local_logger_1 = require("./local-logger");
+const utils_1 = require("@uni.js/utils");
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 PIXI.settings.SORTABLE_CHILDREN = true;
 function wait(time) {
@@ -60,7 +60,7 @@ class ClientApp {
         this.uiStatesContainer = new state_1.UIStateContainer(this.moduleResolved.uiStates);
         this.managers = this.moduleResolved.managers;
         this.controllers = this.moduleResolved.controllers;
-        this.busClient = new bus_client_1.EventBusClient(this.option.socket);
+        this.busClient = new bus_client_1.EventBusClient(this.option.serverUrl);
         this.uiEventBus = new hooks_1.UIEventBus();
         this.initProviderBindings();
         this.initWrapper();
@@ -159,7 +159,7 @@ class ClientApp {
             }
         }
         catch (err) {
-            local_logger_1.Logger.error(err.stack);
+            utils_1.Logger.error(err.stack);
         }
         this.updateTick += 1;
     }
@@ -170,7 +170,7 @@ class ClientApp {
             }
         }
         catch (err) {
-            local_logger_1.Logger.error(err.stack);
+            utils_1.Logger.error(err.stack);
         }
         this.fixedTick += 1;
     }

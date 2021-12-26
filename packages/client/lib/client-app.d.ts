@@ -7,7 +7,7 @@ export interface TextureDef {
     url: string;
 }
 export interface ClientApplicationOption {
-    socket: any;
+    serverUrl: string;
     playground: HTMLElement;
     texturePaths: string[];
     uiEntry: any;

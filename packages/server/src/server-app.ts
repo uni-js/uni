@@ -1,13 +1,13 @@
-import { DelayedEventBus, EventBusServer, EventBusServerSymbol, IEventBus } from '../bus-server';
+import { DelayedEventBus, EventBusServer, EventBusServerSymbol, IEventBus } from './bus-server';
 
 import { Container } from 'inversify';
-import { bindToContainer, resolveAllBindings } from '../inversify';
+import { bindToContainer, resolveAllBindings } from './inversify';
 import { ServerSideManager } from './server-manager';
 import { bindCollectionsTo, createMemoryDatabase, IMemoryDatabase, MemoryDatabaseSymbol } from './memory-database';
 import { ServerSideController } from './server-controller';
 import { getIsServerUseDelay, getServerDebugDelay, isDebugMode } from './debug';
-import { EntityClass, Provider, resolveServerSideModule, ServerControllerClass, ServerManagerClass, ServerSideModule } from '../module';
-import { Logger } from '../local-logger';
+import { EntityClass, Provider, resolveServerSideModule, ServerControllerClass, ServerManagerClass, ServerSideModule } from './module';
+import { Logger } from '@uni.js/utils';
 import chalk from 'chalk';
 
 function wait(time: number) {
@@ -15,7 +15,7 @@ function wait(time: number) {
 }
 
 export interface ServerApplicationOption {
-	socket: any;
+	port: number;
 	module: ServerSideModule;
 }
 
@@ -48,7 +48,7 @@ export class ServerApp {
 			Logger.warn(chalk.bold.red(`Server is running based on a ${getServerDebugDelay(false)}ms delayed event bus`));
 		}
 
-		this.eventBus = getIsServerUseDelay() ? new DelayedEventBus(option.socket) : new EventBusServer(option.socket);
+		this.eventBus = getIsServerUseDelay() ? new DelayedEventBus() : new EventBusServer();
 		this.mdb = createMemoryDatabase(this.entities);
 
 		this.initInversifyContainer();
@@ -58,6 +58,7 @@ export class ServerApp {
 		resolveAllBindings(this.iocContainer, this.managers);
 		resolveAllBindings(this.iocContainer, this.controllers);
 
+		this.eventBus.listen(this.option.port);
 		this.startLoop();
 
 		Logger.info(`Server has started.`);

@@ -12,7 +12,7 @@ import { UIEntry, UIEventBus } from './user-interface/hooks';
 
 import { UIStateContainer } from './user-interface/state';
 import { ClientModuleResolvedResult, ClientSideModule, resolveClientSideModule } from './module';
-import { Logger } from './local-logger';
+import { Logger } from '@uni.js/utils';
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 PIXI.settings.SORTABLE_CHILDREN = true;
@@ -23,7 +23,7 @@ export interface TextureDef {
 }
 
 export interface ClientApplicationOption {
-	socket: any;
+	serverUrl: string;
 	playground: HTMLElement;
 	texturePaths: string[];
 	uiEntry: any;
@@ -79,7 +79,7 @@ export class ClientApp {
 		this.managers = this.moduleResolved.managers;
 		this.controllers = this.moduleResolved.controllers;
 
-		this.busClient = new EventBusClient(this.option.socket);
+		this.busClient = new EventBusClient(this.option.serverUrl);
 		this.uiEventBus = new UIEventBus();
 
 		this.initProviderBindings();

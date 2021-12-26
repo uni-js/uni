@@ -23,3 +23,4 @@ __exportStar(require("./user-interface/hooks"), exports);
 __exportStar(require("./user-interface/state"), exports);
 __exportStar(require("./viewport/event-dispatcher"), exports);
 __exportStar(require("./viewport/viewport"), exports);
+__exportStar(require("./module"), exports);

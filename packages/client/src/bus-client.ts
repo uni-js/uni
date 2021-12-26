@@ -1,17 +1,25 @@
 import { injectable } from 'inversify';
+import { io } from 'socket.io-client';
 import { ExternalEvent, GameEventEmitter } from '@uni.js/event';
+
+const MsgPackParser = require('socket.io-msgpack-parser');
 
 @injectable()
 export class EventBusClient extends GameEventEmitter {
-	constructor(private socket: any) {
+	private client;
+	constructor(url: string) {
 		super();
 
-		this.socket.onAny((event: any, ...args: any[]) => {
+		const isDebug = Boolean(process.env['DEBUG']);
+		const option = isDebug ? {} : { parser: MsgPackParser };
+
+		this.client = io(url, option);
+		this.client.onAny((event, ...args) => {
 			this.emit(event, ...args);
 		});
 	}
 
 	emitBusEvent(event: ExternalEvent) {
-		this.socket.emit(event.constructor.name, event);
+		this.client.emit(event.constructor.name, event);
 	}
 }

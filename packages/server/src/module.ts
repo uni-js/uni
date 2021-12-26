@@ -1,6 +1,6 @@
-import { Entity } from './server-side/memory-database';
-import { ServerSideController } from './server-side/server-controller';
-import { ServerSideManager } from './server-side/server-manager';
+import { Entity } from './memory-database';
+import { ServerSideController } from './server-controller';
+import { ServerSideManager } from './server-manager';
 
 interface ClassOf<T> {
 	new (...args: any[]): T;

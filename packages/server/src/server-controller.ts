@@ -1,4 +1,4 @@
-import { IEventBus } from '../bus-server';
+import { IEventBus } from './bus-server';
 import {
 	ExternalEvent,
 	EXTERNAL_EVENT_HANDLER,
@@ -6,7 +6,7 @@ import {
 	convertInternalToExternalEvent,
 	getHandledEventBounds,
 	InternalEvent,
-} from '../event';
+} from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
 

@@ -11,3 +11,4 @@ export * from "./user-interface/hooks";
 export * from "./user-interface/state";
 export * from "./viewport/event-dispatcher";
 export * from "./viewport/viewport";
+export * from "./module";

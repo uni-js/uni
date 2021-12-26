@@ -1,6 +1,6 @@
 import { ExternalEvent, GameEventEmitter } from '@uni.js/event';
 export declare class EventBusClient extends GameEventEmitter {
-    private socket;
-    constructor(socket: any);
+    private client;
+    constructor(url: string);
     emitBusEvent(event: ExternalEvent): void;
 }

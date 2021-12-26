@@ -1,5 +1,5 @@
 import { CAN_INJECT_COLLECTION, Entity, NotLimitCollection } from './memory-database';
-import { GameEventEmitter, AddEntityEvent, RemoveEntityEvent } from '../event';
+import { GameEventEmitter, AddEntityEvent, RemoveEntityEvent } from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
 

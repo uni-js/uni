@@ -1,11 +1,11 @@
+import { Server, Socket } from 'socket.io';
 import { getServerDebugDelay } from './debug';
 
-import { ExternalEvent, GameEventEmitter } from '../event';
+import { ExternalEvent, GameEventEmitter } from '@uni.js/event';
 
 const wait = (time: number) => new Promise((resolve) => setTimeout(resolve, time));
 
-type Server = any;
-type Socket = any;
+const MsgPackParser = require('socket.io-msgpack-parser');
 
 export const EventBusServerSymbol = Symbol();
 
@@ -17,15 +17,23 @@ export const enum BusEvent {
 export interface IEventBus extends GameEventEmitter {
 	emitTo(connIds: string[], event: ExternalEvent): void;
 	emitToAll(event: ExternalEvent): void;
-	close(): void;
+	listen(port: number): void;
 }
 
 export class EventBusServer extends GameEventEmitter implements IEventBus {
+	private server: Server;
 	private map = new Map<string, Socket>();
-	constructor(private socketInstance: Server) {
+
+	constructor() {
 		super();
 
-		this.socketInstance.on('connect', this.handleConnection);
+		
+		const isDebug = Boolean(process.env['DEBUG']);
+		const cors = { origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] };
+		const option = isDebug ? { cors } : { cors, parser: MsgPackParser };
+
+		this.server = new Server(option);
+		this.server.on('connect', this.handleConnection);
 	}
 
 	private handleConnection = (conn: Socket) => {
@@ -59,9 +67,10 @@ export class EventBusServer extends GameEventEmitter implements IEventBus {
 		this.emitTo(Array.from(this.map.keys()), event);
 	}
 
-	close() {
-		this.socketInstance.off('connect', this.handleConnection);
+	listen(port: number): void{
+		this.server.listen(port);
 	}
+	
 }
 
 export interface DelayedRequest {
@@ -74,9 +83,9 @@ export class DelayedEventBus extends GameEventEmitter implements IEventBus {
 	private eventBus: EventBusServer;
 	private requestQueue: DelayedRequest[] = [];
 	private consuming = false;
-	constructor(socketInstance: Server) {
+	constructor() {
 		super();
-		this.eventBus = new EventBusServer(socketInstance);
+		this.eventBus = new EventBusServer();
 		this.eventBus.onAny((eventName, ...args) => {
 			this.emit(eventName, ...args);
 		});
@@ -114,7 +123,7 @@ export class DelayedEventBus extends GameEventEmitter implements IEventBus {
 		});
 	}
 
-	close(): void {
-		this.eventBus.close();
+	listen(port: number): void {
+		this.eventBus.listen(port);
 	}
 }
