@@ -1,5 +1,7 @@
+import { PluginContext, UniClientPlugin } from '@uni.js/client';
 import { injectable } from 'inversify';
 import * as PIXI from 'pixi.js';
+import { ViewportHTMLEventDispatcher } from './event-dispatcher';
 
 export interface IViewport {
 	moveCenter(x: number, y: number): void;
@@ -33,5 +35,38 @@ export class Viewport extends PIXI.Container implements IViewport {
 
 	getWorldHeight() {
 		return this.worldHeight;
+	}
+}
+
+export interface ViewportPluginOption { 
+	screenWidth: number;
+	screenHeight: number;
+	worldWidth: number;
+	worldHeight: number;
+	mouseElem?: HTMLElement;
+	initLayers?: PIXI.DisplayObject[]
+}
+export function ViewportPlugin(option: ViewportPluginOption): UniClientPlugin {
+	return function(context: PluginContext) {
+		const app = context.app;
+		const viewport = new Viewport(option.screenWidth, option.screenHeight, option.worldWidth, option.worldHeight);
+		const viewportEventDispatcher = new ViewportHTMLEventDispatcher(viewport);
+
+		if(option.mouseElem){
+			viewportEventDispatcher.bind(option.mouseElem);		
+		}
+
+		app.add(Viewport, viewport);
+		app.add(ViewportHTMLEventDispatcher, viewportEventDispatcher);
+
+		app.on("start", () => {
+			if(option.initLayers){
+				for(const layer of option.initLayers){
+					viewport.addChild(layer);
+				}
+			}
+
+			app.addDisplayObject(viewport);
+		})
 	}
 }
