@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from 'react';
 
-import { TextureProvider } from '../texture';
+import { TextureProvider } from '@uni.js/texture';
 import { injectable } from 'inversify';
 import { EventEmitter2 } from 'eventemitter2';
 import { UIStateContainer, UIStateWithMetaInfo } from './state';

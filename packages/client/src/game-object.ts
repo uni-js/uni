@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 
-import { TextureProvider } from './texture';
+import { TextureProvider } from '@uni.js/texture';
 
 type ClassOf<T> = { new (...args: any[]): T };
 

@@ -4,13 +4,12 @@ import * as PIXI from 'pixi.js';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { ParseTexturePath, TextureProvider, TextureType } from './texture';
+import { ParseTexturePath, TextureProvider, TextureType } from '@uni.js/texture';
 import { EventBusClient } from './bus-client';
 import { Container, interfaces } from 'inversify';
 import { bindToContainer, resolveAllBindings } from './inversify';
-import { UIEntry, UIEventBus } from './user-interface/hooks';
+import { UIEntry, UIEventBus, UIStateContainer } from '@uni.js/ui';
 
-import { UIStateContainer } from './user-interface/state';
 import { ClientModuleResolvedResult, ClientSideModule, resolveClientSideModule } from './module';
 import { Logger } from '@uni.js/utils';
 
