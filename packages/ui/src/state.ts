@@ -1,3 +1,5 @@
+import { Container } from "inversify";
+
 export function UIState() {
 	return (target: any) => target;
 }
@@ -69,5 +71,13 @@ export class UIStateContainer {
 
 	getState(clazz: any) {
 		return this.uiStates.get(clazz);
+	}
+}
+
+export function initStateBindings(ioc: Container, uiStateContainer: UIStateContainer) {
+	ioc.bind(UIStateContainer).toConstantValue(uiStateContainer);
+
+	for (const [stateClass, state] of uiStateContainer.getEntries()) {
+		ioc.bind(stateClass).toConstantValue(state);
 	}
 }

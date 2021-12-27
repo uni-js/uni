@@ -1,14 +1,10 @@
 import 'reflect-metadata';
 import * as PIXI from 'pixi.js';
+import { EventEmitter2 as EventEmitter } from "eventemitter2"
 
-import React from 'react';
-import ReactDOM from 'react-dom';
-
-import { ParseTexturePath, TextureProvider, TextureType } from '@uni.js/texture';
 import { EventBusClient } from './bus-client';
 import { Container, interfaces } from 'inversify';
 import { bindToContainer, resolveAllBindings } from './inversify';
-import { UIEntry, UIEventBus, UIStateContainer } from '@uni.js/ui';
 
 import { ClientModuleResolvedResult, ClientSideModule, resolveClientSideModule } from './module';
 import { Logger } from '@uni.js/utils';
@@ -16,16 +12,15 @@ import { Logger } from '@uni.js/utils';
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 PIXI.settings.SORTABLE_CHILDREN = true;
 
-export interface TextureDef {
-	name: string;
-	url: string;
+export interface PluginContext {
+    app: ClientApp
 }
+
+export type UniClientPlugin = (context: PluginContext) => any;
 
 export interface ClientApplicationOption {
 	serverUrl: string;
 	playground: HTMLElement;
-	texturePaths: string[];
-	uiEntry: any;
 	width: number;
 	height: number;
 	resolution: number;
@@ -36,7 +31,7 @@ export function wait(time: number) {
 	return new Promise((resolve) => setTimeout(resolve, time));
 }
 
-export class ClientApp {
+export class ClientApp extends EventEmitter{
 	private updateTick = 0;
 	private fixedTick = 0;
 
@@ -45,16 +40,12 @@ export class ClientApp {
 	private managers: any[] = [];
 	private controllers: any[] = [];
 
-	private uiStatesContainer: UIStateContainer;
-	private textureProvider = new TextureProvider();
-
 	private busClient: EventBusClient;
-	private uiEventBus: UIEventBus;
 
-	private iocContainer: Container;
+	private ioc: Container;
 
 	private wrapper: HTMLElement;
-	private uiContainer: HTMLElement;
+	private coverContainer: HTMLElement;
 	private canvasContainer: HTMLElement;
 
 	private playground: HTMLElement;
@@ -62,6 +53,8 @@ export class ClientApp {
 	private moduleResolved: ClientModuleResolvedResult;
 
 	constructor(private option: ClientApplicationOption) {
+		super();
+
 		this.moduleResolved = resolveClientSideModule(option.module);
 
 		this.app = new PIXI.Application({
@@ -72,18 +65,21 @@ export class ClientApp {
 
 		this.playground = option.playground;
 
-		this.iocContainer = new Container({ skipBaseClassChecks: true });
-		this.uiStatesContainer = new UIStateContainer(this.moduleResolved.uiStates);
+		this.ioc = new Container({ skipBaseClassChecks: true });
 
 		this.managers = this.moduleResolved.managers;
 		this.controllers = this.moduleResolved.controllers;
 
 		this.busClient = new EventBusClient(this.option.serverUrl);
-		this.uiEventBus = new UIEventBus();
 
 		this.initProviderBindings();
 		this.initWrapper();
-		this.initUiContainer();
+		this.initCanvasContainer();
+		this.initCoverContainer();
+	}
+
+	getOption() {
+		return this.option;
 	}
 
 	getCanvasElement() {
@@ -93,17 +89,29 @@ export class ClientApp {
 	getCanvasContainer() {
 		return this.canvasContainer;
 	}
+	
+	add(key: any, value: any) {
+		this.ioc.bind(key).toConstantValue(value);
+	}
 
 	get<T>(identifier: interfaces.ServiceIdentifier<T>) {
-		return this.iocContainer.get(identifier);
+		return this.ioc.get(identifier);
 	}
 
-	getCanvas() {
-		return this.app.view;
-	}
+	async use(plugin: UniClientPlugin) {
+		const context: PluginContext = {
+			app: this
+		}
 
+		await plugin(context);
+	}
+ 
 	addTicker(fn: any) {
 		this.app.ticker.add(fn);
+	}
+
+	removeTicker(fn: any) {
+		this.app.ticker.remove(fn);
 	}
 
 	addDisplayObject(displayObject: PIXI.DisplayObject) {
@@ -114,23 +122,28 @@ export class ClientApp {
 		this.app.stage.removeChild(displayObject);
 	}
 
-	removeTicker(fn: any) {
-		this.app.ticker.remove(fn);
+	/**
+	 * add a html element as a child of cover container element
+	 */
+	addCoverElement(element: HTMLElement) {
+		this.coverContainer.appendChild(element);
+	}
+
+	removeCoverElement(element: HTMLElement) {
+		this.coverContainer.removeChild(element);
 	}
 
 	async start() {
-		await this.initTextures();
-
-		this.initUIBindings();
+		this.emit("beforestart");
 		this.initBaseBindings();
 
-		resolveAllBindings(this.iocContainer, this.managers);
-		resolveAllBindings(this.iocContainer, this.controllers);
+		resolveAllBindings(this.ioc, this.managers);
+		resolveAllBindings(this.ioc, this.controllers);
 
 		this.app.start();
 
-		this.renderUI();
 		this.startLoop();
+		this.emit("start");
 	}
 
 	private initWrapper() {
@@ -144,68 +157,45 @@ export class ClientApp {
 		this.wrapper = wrapper;
 	}
 
-	private initUiContainer() {
-		const uiContainer = document.createElement('div');
-		uiContainer.classList.add('uni-ui-container');
-		uiContainer.style.position = 'absolute';
-		uiContainer.style.left = '0px';
-		uiContainer.style.top = '0px';
-		uiContainer.style.width = '100%';
-		uiContainer.style.height = '100%';
-		uiContainer.style.userSelect = 'none';
-		uiContainer.style.pointerEvents = 'none';
-
+	private initCanvasContainer() {
 		const canvasContainer = document.createElement('div');
 		canvasContainer.classList.add('uni-canvas-container');
 		canvasContainer.append(this.app.view);
-
-		this.wrapper.appendChild(uiContainer);
 		this.wrapper.appendChild(canvasContainer);
-		this.uiContainer = uiContainer;
 		this.canvasContainer = canvasContainer;
+	}
+
+	private initCoverContainer() {
+		const coverContainer = document.createElement('div');
+		coverContainer.classList.add('uni-cover-container');
+		coverContainer.style.position = 'absolute';
+		coverContainer.style.left = '0px';
+		coverContainer.style.top = '0px';
+		coverContainer.style.width = '100%';
+		coverContainer.style.height = '100%';
+		coverContainer.style.userSelect = "none";
+		coverContainer.style.pointerEvents = "none";
+
+		this.wrapper.appendChild(coverContainer);
+		this.coverContainer = coverContainer;
 	}
 
 	private initProviderBindings() {
 		for (const provider of this.moduleResolved.providers) {
-			this.iocContainer.bind(provider.key).toConstantValue(provider.value);
+			this.ioc.bind(provider.key).toConstantValue(provider.value);
 		}
 	}
 
 	private initBaseBindings() {
-		const ioc = this.iocContainer;
+		this.ioc.bind(EventBusClient).toConstantValue(this.busClient);
 
-		ioc.bind(EventBusClient).toConstantValue(this.busClient);
-		ioc.bind(TextureProvider).toConstantValue(this.textureProvider);
-		ioc.bind(UIEventBus).toConstantValue(this.uiEventBus);
-
-		bindToContainer(ioc, [...this.managers, ...this.controllers]);
-	}
-
-	private initUIBindings() {
-		this.iocContainer.bind(UIStateContainer).toConstantValue(this.uiStatesContainer);
-
-		for (const [stateClass, state] of this.uiStatesContainer.getEntries()) {
-			this.iocContainer.bind(stateClass).toConstantValue(state);
-		}
-	}
-
-	private renderUI() {
-		const dataSource = this.iocContainer.get(UIStateContainer);
-
-		const ticker = this.app.ticker;
-		const eventBus = this.uiEventBus;
-		const textureProvider = this.textureProvider;
-
-		ReactDOM.render(
-			React.createElement(UIEntry, { dataSource, ticker, eventBus, textureProvider }, React.createElement(this.option.uiEntry)),
-			this.uiContainer,
-		);
+		bindToContainer(this.ioc, [...this.managers, ...this.controllers]);
 	}
 
 	private doUpdateTick() {
 		try {
 			for (const manager of this.managers) {
-				this.iocContainer.get<any>(manager).doUpdateTick(this.updateTick);
+				this.ioc.get<any>(manager).doUpdateTick(this.updateTick);
 			}
 		} catch (err: any) {
 			Logger.error(err.stack);
@@ -217,7 +207,7 @@ export class ClientApp {
 	private doFixedUpdateTick() {
 		try {
 			for (const manager of this.managers) {
-				this.iocContainer.get<any>(manager).doFixedUpdateTick(this.fixedTick);
+				this.ioc.get<any>(manager).doFixedUpdateTick(this.fixedTick);
 			}
 		} catch (err: any) {
 			Logger.error(err.stack);
@@ -229,18 +219,5 @@ export class ClientApp {
 	private startLoop() {
 		this.app.ticker.add(this.doUpdateTick.bind(this));
 		this.app.ticker.add(this.doFixedUpdateTick.bind(this));
-	}
-
-	private async initTextures() {
-		for (const path of this.option.texturePaths) {
-			const parsed = ParseTexturePath(path);
-			if (Boolean(parsed) === false) continue;
-			const [key, relPath, type] = parsed;
-			if (type == TextureType.IMAGESET) {
-				await this.textureProvider.addJSON(key, relPath);
-			} else {
-				await this.textureProvider.add(key, relPath);
-			}
-		}
 	}
 }
