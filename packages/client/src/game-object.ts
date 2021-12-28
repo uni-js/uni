@@ -17,7 +17,7 @@ export class GameObject extends PIXI.Container implements IGameObject {
 
 	private localId: number;
 
-	constructor(protected textureProvider: any, protected serverId?: number) {
+	constructor(protected serverId?: number) {
 		super();
 		this.localId = -++GameObject.objectCount;
 	}
