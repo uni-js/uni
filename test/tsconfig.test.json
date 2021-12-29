@@ -15,6 +15,5 @@
         "types": ["reflect-metadata","node","jest"],
         "noUnusedParameters": false,
         "noUnusedLocals": false
-    },
-    "include": ["src/**/*", "test/**/*"]
+    }
 }

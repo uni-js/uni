@@ -9,13 +9,15 @@ export interface EntityIndex{
  * or mark a union-index
  */
 export function Index(propNames?: string[]) {
-    const isUnion = propNames !== undefined;
 
     return (target: any, propKey?: string) => {
-        let indexes: Set<EntityIndex> = Reflect.getMetadata(EntityIndexesSymbol, target);
+        const isUnion = propKey === undefined;
+        const targetClass = isUnion ? target : target.constructor;
+
+        let indexes: Set<EntityIndex> = Reflect.getMetadata(EntityIndexesSymbol, targetClass);
         if(!indexes){
             indexes = new Set<EntityIndex>();
-            Reflect.defineMetadata(EntityIndexesSymbol, indexes, target);
+            Reflect.defineMetadata(EntityIndexesSymbol, indexes, targetClass);
         }
         if(isUnion) {
             indexes.add({

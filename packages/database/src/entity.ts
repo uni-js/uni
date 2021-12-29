@@ -11,10 +11,10 @@ export interface EntityMetadata{
 }
 
 export function Property() : PropertyDecorator{
-    return (target: any, propKey: string | symbol) => {
-        const array = Reflect.getMetadata(UniEntityPropertySymbol, target) || [];
+    return function (target: any, propKey: string | symbol) {
+        const array = Reflect.getMetadata(UniEntityPropertySymbol, target.constructor) || [];
         array.push(propKey);
-        Reflect.defineMetadata(UniEntityPropertySymbol, array, target);
+        Reflect.defineMetadata(UniEntityPropertySymbol, array, target.constructor);
     }
 }
 

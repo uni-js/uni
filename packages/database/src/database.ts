@@ -88,12 +88,17 @@ export class EntityCollection {
                 const values: string[] = [];
                 for (const prop of index.propNames) {
                     if(updateAction[prop] !== undefined){
-                        entity[prop] = updateAction[prop];
+                        values.push(updateAction[prop]);
+                    }else{
+                        values.push(entity[prop])
                     }
-                    values.push(entity[prop]);
                 }
     
                 this.addNewIndex(index.propNames, values, entity);
+            }
+
+            for(const prop in updateAction){
+                entity[prop] = updateAction[prop];
             }
         }
     }
