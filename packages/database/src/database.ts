@@ -33,6 +33,8 @@ export class EntityCollection {
     private indexMap: Map<string, Set<any>> = new Map();
     private reverseIndexMap: Map<any, string[]> = new Map();
     private matchedIndexes: EntityIndex[];
+    private idCount: number = 0;
+    private idMap: Map<number, any> = new Map();
 
     constructor(metadata: EntityMetadata) {
         
@@ -56,10 +58,22 @@ export class EntityCollection {
             this.addNewIndex(index.propNames, values, entity);
         }
 
+        entity.id = this.idCount++;
+        this.idMap.set(entity.id, entity)
+        
     }
 
+    /**
+     * find entities by `query` condition
+     * 
+     * * BE AWARE: `query` condition must match a index
+     */
     find(query: any): any[] {
         const names = Object.getOwnPropertyNames(query);        
+        if(query.id !== undefined){
+            return [this.idMap.get(query.id)];
+        }
+
         let indexKey = '';
         for(const name of names){
             const value = query[name];
@@ -75,7 +89,44 @@ export class EntityCollection {
         return Array.from(results.values());
     }
 
-    findAndUpdate(updateAction: any, findQuery: any): void {
+    update(entity: any) {
+        if(entity.id === undefined){
+            entity.id = this.idCount++;
+            this.idMap.set(entity.id, entity);
+        }
+        this.updateEntity(entity, entity)
+    }
+
+    private updateEntity(entity: any, updateAction: any) {
+        this.reverseIndexMap.set(entity, []);
+        for (const index of this.matchedIndexes) {
+            const values: string[] = [];
+            for (const prop of index.propNames) {
+                if(updateAction[prop] !== undefined){
+                    values.push(updateAction[prop]);
+                }else{
+                    values.push(entity[prop])
+                }
+            }
+
+            this.addNewIndex(index.propNames, values, entity);
+        }
+
+        for(const prop in updateAction){
+            entity[prop] = updateAction[prop];
+        }
+    }
+
+    /**
+     * find an entity by `query` condition
+     * 
+     * * BE AWARE: `query` condition must match a index
+     */
+    findOne(query: any): any {
+        return this.find(query)[0];
+    }
+
+    findAndUpdate(findQuery: any, updateAction: any): void {
         const entities = this.find(findQuery);
         if (!entities) return;
         if(entities[0] === undefined) return;
@@ -83,23 +134,7 @@ export class EntityCollection {
         this.removeEntitiesIndexes(entities);
 
         for(const entity of entities){ // rebuild indexes
-            this.reverseIndexMap.set(entity, []);
-            for (const index of this.matchedIndexes) {
-                const values: string[] = [];
-                for (const prop of index.propNames) {
-                    if(updateAction[prop] !== undefined){
-                        values.push(updateAction[prop]);
-                    }else{
-                        values.push(entity[prop])
-                    }
-                }
-    
-                this.addNewIndex(index.propNames, values, entity);
-            }
-
-            for(const prop in updateAction){
-                entity[prop] = updateAction[prop];
-            }
+            this.updateEntity(entity, updateAction);
         }
     }
 
@@ -108,6 +143,9 @@ export class EntityCollection {
         if (!entities) return;
 
         this.removeEntitiesIndexes(entities);
+        for(const entity of entities){
+            this.idMap.delete(entity.id);
+        }
     }
 
     private removeEntitiesIndexes(entities: any[]){

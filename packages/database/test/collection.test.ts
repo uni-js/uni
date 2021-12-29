@@ -69,10 +69,10 @@ describe("collection test",() => {
 
         for(let i = 0; i < 100; i++){
             collection.findAndUpdate({
+                realAge: i
+            },{
                 name: "zhy",
                 age: i + 1,
-            },{
-                realAge: i
             })
         }
 
@@ -164,12 +164,12 @@ describe("collection test",() => {
 
         for(let i=50;i<100;i++){
             collection.findAndUpdate({
+                x: i,
+                y: i * 2
+            },{
                 x: i / 2,
                 y: i,
                 name: "modified" + i
-            },{
-                x: i,
-                y: i * 2
             })
         }
     
@@ -180,5 +180,60 @@ describe("collection test",() => {
 
             expect(collection.find({ x: i , y: i * 2 }).length).toBe(0);
         }
+    })
+
+    it("add entity by update", () => {
+        @Entity()
+        class TestEntity{
+            @Index()
+            @Property()
+            name: string;
+
+            @Index()
+            @Property()
+            age: number;
+        }
+
+        const db = new UniDatabase();
+        db.addCollection(TestEntity);
+        const collection = db.collection(TestEntity);
+
+        const entity: any = {
+            name: "zhy",
+            age: 22
+        };
+
+        const entity2: any = {
+            name: "zhy",
+            age: 23
+        }
+
+        collection.update(entity);
+        collection.update(entity2);
+
+        expect(entity.id).toBe(0);
+        expect(entity2.id).toBe(1);
+
+        expect(collection.findOne({ id: 0 })).toBe(entity);
+        expect(collection.findOne({ id: 1 })).toBe(entity2);
+
+        collection.findAndUpdate({ name: "zhy" }, { name: "zhy2" });
+        collection.findAndRemove({ id : 0 })
+
+        expect(collection.find({ name: "zhy2" }).length).toBe(1);
+        expect(collection.findOne({ name: "zhy2" })).toBe(entity2);
+        
+        entity.name = "zhy3";
+        entity2.name = "zhy3";
+
+        delete entity.id;
+
+        collection.update(entity)
+        collection.update(entity2)
+
+        const results = collection.find({ name: "zhy3" });
+        expect(results.length).toBe(2);
+        expect(entity2.id).toBe(1);
+        expect(entity.id).toBe(2);
     })
 })
