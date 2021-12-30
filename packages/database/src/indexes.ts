@@ -1,3 +1,5 @@
+import { getSuperEntity, getTopEntity } from "./entity";
+
 export const EntityIndexesSymbol = Symbol();
 
 export interface EntityIndex{
@@ -14,17 +16,17 @@ export function Index(propNames?: string[]) {
         const isUnion = propKey === undefined;
         const targetClass = isUnion ? target : target.constructor;
 
-        let indexes: Set<EntityIndex> = Reflect.getMetadata(EntityIndexesSymbol, targetClass);
+        let indexes: EntityIndex[] = Reflect.getMetadata(EntityIndexesSymbol, targetClass);
         if(!indexes){
-            indexes = new Set<EntityIndex>();
+            indexes = [];
             Reflect.defineMetadata(EntityIndexesSymbol, indexes, targetClass);
         }
         if(isUnion) {
-            indexes.add({
+            indexes.push({
                 propNames
             })
         }else{
-            indexes.add({
+            indexes.push({
                 propNames: [ propKey ]
             })
         }
@@ -32,7 +34,5 @@ export function Index(propNames?: string[]) {
 }
 
 export function getEntityIndexes(targetEntityClass: any) : EntityIndex[] {
-    const indexes = Reflect.getMetadata(EntityIndexesSymbol, targetEntityClass);
-    if(!indexes)return [];
-    return Array.from(indexes);
+    return Reflect.getMetadata(EntityIndexesSymbol, targetEntityClass) || [];
 }

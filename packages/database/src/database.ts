@@ -1,5 +1,6 @@
 import { EntityIndex } from "./indexes";
-import { EntityMetadata, getEntityMetadata } from "./entity";
+import { getTopEntity, isEntity } from "./entity";
+import { EntityMetadata, getEntityMetadata } from "./metadata";
 
 const HashKeySplitChar = "#";
 
@@ -15,12 +16,26 @@ function buildIndexKey(propNames: string[], types: string[], values: (string | n
 export class UniDatabase {
     private collections = new Map<any, EntityCollection>();
 
-    addCollection(entityClass: any) {
-        this.collections.set(entityClass, new EntityCollection(getEntityMetadata(entityClass)));
+    constructor(private entityClasses: any[]) {
+        for(const clazz of entityClasses){
+            this.addCollection(clazz);
+        }
+    }
+    
+    private addCollection(entityClass: any) {
+        if(!isEntity(entityClass))
+            throw new Error(`must be an entity`);
+
+        const topEntity = getTopEntity(entityClass);
+        if(topEntity === entityClass){
+            const metadata = getEntityMetadata(entityClass);
+            this.collections.set(entityClass, new EntityCollection(metadata));
+        }
     }
 
     collection(entityClass: any){
-        return this.collections.get(entityClass);
+        const topEntity = getTopEntity(entityClass);
+        return this.collections.get(topEntity);
     }
 
     removeCollection(entityClass: any){
@@ -78,8 +93,8 @@ export class EntityCollection {
         for(const name of names){
             const value = query[name];
             const type = typeof(value);
-            if(type !== "string" && type !== "number")
-                throw new Error(`value type must be string/number`);
+            if(type !== "string" && type !== "number" && type !== "undefined")
+                throw new Error(`value type must be string/number/undefined`);
 
             indexKey += name + HashKeySplitChar + type + HashKeySplitChar + value + HashKeySplitChar;
         }

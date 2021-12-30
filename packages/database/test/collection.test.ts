@@ -16,8 +16,7 @@ describe("collection test",() => {
             age: number;
         }
 
-        const db = new UniDatabase();
-        db.addCollection(TestEntity);
+        const db = new UniDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         for(let i = 0; i  < 100; i++){
@@ -55,8 +54,7 @@ describe("collection test",() => {
             realAge: number;
         }
 
-        const db = new UniDatabase();
-        db.addCollection(TestEntity);
+        const db = new UniDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         for(let i = 0; i  < 100; i++){
@@ -103,8 +101,7 @@ describe("collection test",() => {
             family: string;
         }
 
-        const db = new UniDatabase();
-        db.addCollection(TestEntity);
+        const db = new UniDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
         
         for(let i=0;i<50;i++){
@@ -150,8 +147,7 @@ describe("collection test",() => {
             y: number;
         }
 
-        const db = new UniDatabase();
-        db.addCollection(GameObjectEntity);
+        const db = new UniDatabase([GameObjectEntity]);
         const collection = db.collection(GameObjectEntity);
 
         for(let i=50;i<100;i++){
@@ -194,8 +190,7 @@ describe("collection test",() => {
             age: number;
         }
 
-        const db = new UniDatabase();
-        db.addCollection(TestEntity);
+        const db = new UniDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         const entity: any = {
@@ -235,5 +230,43 @@ describe("collection test",() => {
         expect(results.length).toBe(2);
         expect(entity2.id).toBe(1);
         expect(entity.id).toBe(2);
+    })
+
+    it("extending", () => {
+        @Entity()
+        class Animal{
+            @Index()
+            @Property()
+            x: number;
+
+            @Index()
+            @Property()
+            name: string;
+        }
+
+        @Index([ "tigerFamily", "tigerBelongs" ])
+        @Entity()
+        class Tiger extends Animal{
+            @Index()
+            @Property()
+            tigerAge: number;
+
+            @Property()
+            tigerFamily: string;
+
+            @Property()
+            tigerBelongs: string;
+        }
+
+        const db = new UniDatabase([Animal, Tiger]);
+
+        expect(db.collection(Animal)).toBe(db.collection(Tiger));
+        db.collection(Tiger).insertOne({ x: 5, name: "tigerA",  tigerAge: 10, tigerFamily: "family", tigerBelongs: "belongs" });
+
+        const collection = db.collection(Animal);
+        expect(collection.findOne({ name: "tigerA" }).tigerAge).toBe(10);
+        expect(collection.findOne({ x: 5 }).name).toBe("tigerA");
+        expect(collection.findOne({ tigerAge: 10 }).x).toBe(5);
+        expect(collection.findOne({ tigerFamily: "family", tigerBelongs: "belongs" }).tigerAge).toBe(10);
     })
 })

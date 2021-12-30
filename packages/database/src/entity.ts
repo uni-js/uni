@@ -1,14 +1,7 @@
-import { EntityIndex, getEntityIndexes } from "./indexes";
-import { getPrivateProperties } from "./private";
-
-export const UniEntitySymbol = Symbol();
-export const UniEntityPropertySymbol = Symbol();
-
-export interface EntityMetadata{
-    indexes: EntityIndex[];
-    privateProps: string[];
-    properties: string[]
-}
+const UniTopClass = Symbol();
+const UniEntityExtendedClass = Symbol();
+const UniEntitySymbol = Symbol();
+const UniEntityPropertySymbol = Symbol();
 
 export function Property() : PropertyDecorator{
     return function (target: any, propKey: string | symbol) {
@@ -20,6 +13,12 @@ export function Property() : PropertyDecorator{
 
 export function Entity() : ClassDecorator {
     return (target: any) => {
+        const prototype = Reflect.getPrototypeOf(target);
+        const superClass = isEntity(prototype) ? prototype : undefined;
+        const topClass = (superClass && Reflect.getMetadata(UniTopClass, superClass)) || target;
+
+        Reflect.defineMetadata(UniTopClass, topClass, target)
+        Reflect.defineMetadata(UniEntityExtendedClass, superClass, target);
         Reflect.defineMetadata(UniEntitySymbol , true, target);
     }
 }
@@ -28,14 +27,14 @@ export function isEntity(targetEntityClass: any) {
     return Reflect.hasMetadata(UniEntitySymbol, targetEntityClass);
 }
 
-export function getEntityProperties(targetEntityClass: any) {
+export function getEntityProperties(targetEntityClass: any): string[] {
     return Reflect.getMetadata(UniEntityPropertySymbol, targetEntityClass);
 }
 
-export function getEntityMetadata(targetEntityClass: any): EntityMetadata {
-    return {
-        indexes: getEntityIndexes(targetEntityClass),
-        privateProps: getPrivateProperties(targetEntityClass),
-        properties: getEntityProperties(targetEntityClass)
-    };
+export function getSuperEntity(targetEntityClass: any){
+    return Reflect.getMetadata(UniEntityExtendedClass, targetEntityClass);
+}
+
+export function getTopEntity(targetEntityClass: any){
+    return Reflect.getMetadata(UniTopClass, targetEntityClass);
 }
