@@ -1,12 +1,10 @@
+import { EntityCollection, UniDatabase } from '@uni.js/database';
 import { Container, inject } from 'inversify';
 import LokiJS from 'lokijs';
 
 export const MemoryDatabaseSymbol = Symbol();
 
-export interface NotLimitCollection<T extends Record<string, any>> extends LokiJS.Collection<T> {}
-export type EntityQuery<T> = LokiQuery<T>;
-export type IMemoryDatabase = LokiJS;
-export class MemoryDatabase extends LokiJS {}
+export interface NotLimitCollection<T extends Record<string, any>> extends EntityCollection<T> {}
 
 export const CAN_INJECT_COLLECTION = Symbol();
 
@@ -24,12 +22,8 @@ export interface EntityImpl {
 	name: string;
 }
 
-export function createMemoryDatabase(entities: EntityImpl[]): IMemoryDatabase {
-	const db = new LokiJS('memory');
-	for (const entity of entities) {
-		db.addCollection(entity.name);
-	}
-	return db;
+export function createMemoryDatabase(entities: EntityImpl[]) {
+	return new UniDatabase( entities );
 }
 export function injectCollection(cls: any) {
 	const decorate = inject(cls);
@@ -43,8 +37,8 @@ export function injectCollection(cls: any) {
 	};
 }
 
-export function bindCollectionsTo(ioc: Container, entities: EntityImpl[], db: IMemoryDatabase) {
+export function bindCollectionsTo(ioc: Container, entities: EntityImpl[], db: UniDatabase) {
 	for (const cls of entities) {
-		ioc.bind(cls).toConstantValue(db.getCollection(cls.name));
+		ioc.bind(cls).toConstantValue(db.collection(cls));
 	}
 }

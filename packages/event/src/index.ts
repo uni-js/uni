@@ -71,7 +71,10 @@ export class GameEventEmitter extends EventEmitter2 {
 		const bounds = getHandledEventBounds(this, INTERNAL_EVENT_HANDLER);
 		for (const bound of bounds) {
 			const emitterName = bound.emitterPropertyName as string;
-			const emitter = (this as any)[emitterName] as GameEventEmitter;
+			const emitter = emitterName ? (this as any)[emitterName] as GameEventEmitter : this;
+
+			if(!emitter)
+				throw new Error(`the target emitter ${emitterName} doesn't exists at: ${this.constructor.name}`)
 
 			if (emitter[IS_GAME_EVENT_EMITTER] !== true)
 				throw new Error(`the target emitter is not GameEventEmitter when binding ${bound.eventClass.name}`);

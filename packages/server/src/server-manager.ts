@@ -1,9 +1,10 @@
-import { CAN_INJECT_COLLECTION, Entity, NotLimitCollection } from './memory-database';
+import { CAN_INJECT_COLLECTION, NotLimitCollection } from './memory-database';
+import { UniEntity, UniEntityPart, UniEntityWithOptionalId } from "@uni.js/database"
 import { GameEventEmitter, AddEntityEvent, RemoveEntityEvent } from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
 
-export type ObjectQueryCondition<T> = LokiQuery<T & LokiObj>;
+export type ObjectQueryCondition<T extends UniEntity> =  Partial<T & UniEntityPart>;
 
 export class ServerSideManager extends GameEventEmitter {
 	constructor() {
@@ -17,157 +18,124 @@ export interface UpdateOnlyCollection<T extends Record<string, any>> extends Not
 	/**
 	 * @deprecated use removeEntity method of a entity manager to remove an entity
 	 */
-	remove(): any;
+	remove(entity: any): any;
 
 	/**
 	 * @deprecated use removeEntity method of a entity manager to remove an entity
 	 */
-	removeWhere(): any;
+	removeWhere(query: any): any;
 
 	/**
 	 * @deprecated use removeEntity method of a entity manager to remove an entity
 	 */
-	findAndRemove(): any;
+	findAndRemove(query: any): any;
 
 	/**
 	 * @deprecated use addEntity method of a entity manager to add an entity
 	 */
-	add(): any;
+	insert(entities: any[]): any;
 
 	/**
 	 * @deprecated use addEntity method of a entity manager to add an entity
 	 */
-	insert(): any;
-
-	/**
-	 * @deprecated use addEntity method of a entity manager to add an entity
-	 */
-	insertOne(): any;
+	insertOne(entity: any): any;
 }
 
 export interface IEntityManager<K> extends ServerSideManager {
-	getEntityById(entityId: number): K;
-	findEntity(query: ObjectQueryCondition<K>): K;
-	findEntities(query?: ObjectQueryCondition<K>): K[];
-	getAllEntities(): K[];
+	getEntityById(entityId: number): ReadonlyUniEntity<K>;
+	findEntity(query: ObjectQueryCondition<K>): ReadonlyUniEntity<K>;
+	findEntities(query?: ObjectQueryCondition<K>): ReadonlyUniEntity<K>[];
+	getAllEntities(): ReadonlyUniEntity<K>[];
 	hasEntity(query?: ObjectQueryCondition<K>): boolean;
-	addNewEntity(newEntity: K): K;
-	addNewEntities(newEntities: K[]): K[];
+	addNewEntity(newEntity: K): ReadonlyUniEntity<K>;
+	addNewEntities(newEntities: K[]): void;
 	removeEntity(entity: K): void;
-	addAtRecord<R>(entity: K, propertyName: string, record: R): void;
-	removeAtRecord<R>(entity: K, propertyName: string, record: R): void;
-	hasAtRecord<R>(entity: K, propertyName: string, record: R): boolean;
 }
+
+export type ReadonlyUniEntity<T> = Readonly<T & UniEntityPart>
 
 /**
  * entity manager is designed for managing one type of entity
  */
-export class EntityManager<T extends Entity> extends ServerSideManager implements IEntityManager<T> {
+export class EntityManager<T extends UniEntity> extends ServerSideManager {
 	static [CAN_INJECT_COLLECTION] = true;
 
 	private entityList: NotLimitCollection<T>;
 
 	/**
-	 * @param updateOnlyEntityList the entity set which is managed
+	 * @param listOrManager the entity set which is managed
 	 */
-	constructor(updateOnlyEntityList: UpdateOnlyCollection<T>) {
+	constructor(entityList: UpdateOnlyCollection<T>) {
 		super();
 
-		this.entityList = updateOnlyEntityList;
+		this.entityList = entityList;
 	}
 
 	getEntityList(): NotLimitCollection<T> {
 		return this.entityList;
 	}
 
-	addNewEntities(newEntities: T[]): T[] {
+	addNewEntities(newEntities: T[]): ReadonlyUniEntity<T> [] {
 		return newEntities.map((newEntity) => {
 			return this.addNewEntity(newEntity);
 		});
 	}
 
-	getEntityById(entityId: number): Readonly<T> {
+	getEntityById(entityId: number): ReadonlyUniEntity<T> {
 		return this.entityList.findOne({
-			$loki: {
-				$eq: entityId,
-			},
-		});
+			id: entityId
+		} as any);
 	}
 
-	findEntity(query: ObjectQueryCondition<T>): Readonly<T> {
-		return this.entityList.findOne(query);
+	findEntity(query: ObjectQueryCondition<T>): ReadonlyUniEntity<T> {
+		return this.entityList.findOne(query as any);
 	}
 
-	findEntities(query?: ObjectQueryCondition<T>): Readonly<T>[] {
-		return this.entityList.find(query) as T[];
+	findEntities(query?: ObjectQueryCondition<T>): ReadonlyUniEntity<T>[] {
+		return this.entityList.find(query as any);
 	}
 
-	getAllEntities(): Readonly<T>[] {
-		return this.entityList.find();
+	/**
+	 * @deprecated
+	 */
+	getAllEntities(): ReadonlyUniEntity<T>[] {
+		throw new Error(`not implemented`)
 	}
 
 	hasEntity(query?: ObjectQueryCondition<T>) {
 		return Boolean(this.findEntity(query));
 	}
 
-	addNewEntity(newEntity: T): Readonly<T> {
+	addNewEntity(newEntity: UniEntityWithOptionalId<T>): ReadonlyUniEntity<T> {
 		const insertedEntity = this.entityList.insertOne(newEntity);
-		this.emitEvent(AddEntityEvent, { entityId: insertedEntity.$loki, entity: insertedEntity });
+		this.emitEvent(AddEntityEvent, { entityId: insertedEntity.id, entity: insertedEntity });
 		return insertedEntity;
 	}
 
-	removeEntity(entity: T) {
-		const entityId = entity.$loki;
+	removeEntity(entity: UniEntityWithOptionalId<T>) {
+		const entityId = entity.id;
 		this.entityList.remove(entity);
 		this.emitEvent(RemoveEntityEvent, { entityId: entityId, entity });
 	}
 
-	addAtRecord<R>(entity: T, propertyName: string, record: R, key?: string | number) {
-		const recordStore = (entity as any)[propertyName] as any;
-		if (recordStore.has(record)) return;
-
-		if (key !== undefined) {
-			recordStore.add(key, record);
-		} else {
-			recordStore.add(record);
-		}
+	updateEntity(entity: UniEntityWithOptionalId<T>) {
+		this.entityList.update(entity);
 	}
 
-	removeAtRecord<R>(entity: T, propertyName: string, recordOrKey: R | string) {
-		const recordStore = (entity as any)[propertyName] as any;
-		if (!recordStore.has(recordOrKey)) return;
-		recordStore.remove(recordOrKey);
-	}
-
-	hasAtRecord<R>(entity: T, propertyName: string, recordOrKey: R | string) {
-		const recordStore = (entity as any)[propertyName] as any;
-		return recordStore.has(recordOrKey);
-	}
 }
 
-export class ExtendedEntityManager<T extends Entity, K extends T> extends ServerSideManager implements IEntityManager<K> {
+
+export class ExtendedEntityManager<T extends UniEntity, K extends T> extends ServerSideManager implements IEntityManager<K> {
 	constructor(private manager: EntityManager<T>, private clazz: ClassOf<K>) {
 		super();
 	}
 
-	addNewEntities(newEntities: K[]): K[] {
-		return this.manager.addNewEntities(newEntities) as K[];
+	addNewEntities(newEntities: K[]) {
+		return this.manager.addNewEntities(newEntities);
 	}
 
-	addAtRecord<R>(entity: T, propertyName: string, record: R): void {
-		this.manager.addAtRecord(entity, propertyName, record);
-	}
-
-	removeAtRecord<R>(entity: T, propertyName: string, record: R): void {
-		this.manager.removeAtRecord(entity, propertyName, record);
-	}
-
-	hasAtRecord<R>(entity: T, propertyName: string, record: R): boolean {
-		return this.manager.hasAtRecord(entity, propertyName, record);
-	}
-
-	getEntityById(entityId: number): Readonly<K> {
-		return this.manager.getEntityById(entityId) as K;
+	getEntityById(entityId: number) {
+		return this.manager.getEntityById(entityId) as ReadonlyUniEntity<K>;
 	}
 
 	protected updateEntity<M extends K | T>(entity: M): Readonly<M> {
@@ -175,36 +143,36 @@ export class ExtendedEntityManager<T extends Entity, K extends T> extends Server
 		return list.update(entity) as M;
 	}
 
-	findEntity(query: ObjectQueryCondition<K>): Readonly<K> {
-		return this.manager.findEntity(query) as K;
+	findEntity(query: ObjectQueryCondition<K>) {
+		return this.manager.findEntity(query) as ReadonlyUniEntity<K>;
 	}
 
-	findEntities(query?: ObjectQueryCondition<K>): Readonly<K>[] {
-		return this.manager.findEntities(query) as K[];
+	findEntities(query?: ObjectQueryCondition<K>) {
+		return this.manager.findEntities(query) as ReadonlyUniEntity<K>[];
 	}
 
-	getAllEntities(): Readonly<K>[] {
-		return this.manager.getAllEntities() as K[];
+	getAllEntities() {
+		return this.manager.getAllEntities() as ReadonlyUniEntity<K>[];
 	}
 
 	hasEntity(query?: ObjectQueryCondition<K>): boolean {
 		return this.manager.hasEntity(query);
 	}
 
-	addNewEntity(newEntity: K): Readonly<K> {
-		const inserted = this.manager.addNewEntity(newEntity) as K;
+	addNewEntity(newEntity: K) {
+		const inserted = this.manager.addNewEntity(newEntity);
 
 		if (inserted instanceof this.clazz) {
-			this.emitEvent(AddEntityEvent, { entityId: newEntity.$loki, entity: newEntity });
+			this.emitEvent(AddEntityEvent, { entityId: newEntity.id, entity: newEntity });
 		}
-		return inserted;
+		return inserted as ReadonlyUniEntity<K>;
 	}
 
 	removeEntity(entity: K): void {
-		const entityId = entity.$loki;
+		const entityId = entity.id;
 		this.manager.removeEntity(entity);
 
-		if (entity instanceof this.clazz) {
+		if (<any>entity instanceof this.clazz) {
 			this.emitEvent(RemoveEntityEvent, { entityId, entity });
 		}
 	}

@@ -1,6 +1,7 @@
 import { EntityIndex } from "./indexes";
 import { getTopEntity, isEntity } from "./entity";
 import { EntityMetadata, getEntityMetadata } from "./metadata";
+import { UniEntity, UniEntityPart, UniEntityWithOptionalId } from ".";
 
 const HashKeySplitChar = "#";
 
@@ -43,7 +44,7 @@ export class UniDatabase {
     }
 }
 
-export class EntityCollection {
+export class EntityCollection<T extends UniEntity = any> {
     private indexes: Set<EntityIndex> = new Set<EntityIndex>()
     private indexMap: Map<string, Set<any>> = new Map();
     private reverseIndexMap: Map<any, string[]> = new Map();
@@ -51,7 +52,7 @@ export class EntityCollection {
     private idCount: number = 0;
     private idMap: Map<number, any> = new Map();
 
-    constructor(metadata: EntityMetadata) {
+    constructor(private metadata: EntityMetadata) {
         
         this.indexes = new Set();
         for (const index of metadata.indexes) {
@@ -60,8 +61,14 @@ export class EntityCollection {
 
         this.matchedIndexes = this.getMatchedIndexesInPropNames(metadata.properties);
     }
+    
+    insert(entities: UniEntityWithOptionalId<T>[]): void {
+        for(const entity of entities){
+            this.insertOne(entity);
+        }
+    }
 
-    insertOne(entity: any): void {
+    insertOne(entity: UniEntityWithOptionalId<T>): T & UniEntityPart {
         this.reverseIndexMap.set(entity, []);
                 
         for (const index of this.matchedIndexes) {
@@ -73,9 +80,10 @@ export class EntityCollection {
             this.addNewIndex(index.propNames, values, entity);
         }
 
-        entity.id = this.idCount++;
+        (<any>entity).id = this.idCount++;
         this.idMap.set(entity.id, entity)
         
+        return <T & UniEntityPart> entity;
     }
 
     /**
@@ -83,7 +91,7 @@ export class EntityCollection {
      * 
      * * BE AWARE: `query` condition must match a index
      */
-    find(query: any): any[] {
+    find(query: Partial<T & UniEntityPart>): (T & UniEntityPart)[] {
         const names = Object.getOwnPropertyNames(query);        
         if(query.id !== undefined){
             return [this.idMap.get(query.id)];
@@ -93,8 +101,8 @@ export class EntityCollection {
         for(const name of names){
             const value = query[name];
             const type = typeof(value);
-            if(type !== "string" && type !== "number" && type !== "undefined")
-                throw new Error(`value type must be string/number/undefined`);
+            if(type !== "string" && type !== "number" && type !== "boolean" && type !== "undefined")
+                throw new Error(`value type must be string/number/boolean/undefined`);
 
             indexKey += name + HashKeySplitChar + type + HashKeySplitChar + value + HashKeySplitChar;
         }
@@ -104,12 +112,14 @@ export class EntityCollection {
         return Array.from(results.values());
     }
 
-    update(entity: any) {
+    update(entity: UniEntityWithOptionalId<T>) {
         if(entity.id === undefined){
-            entity.id = this.idCount++;
-            this.idMap.set(entity.id, entity);
+            this.insertOne(entity);
+        }else{
+            this.removeEntitiesIndexes([entity]);
+            this.updateEntity(entity, entity);
         }
-        this.updateEntity(entity, entity)
+        return entity;
     }
 
     /**
@@ -124,7 +134,7 @@ export class EntityCollection {
         };
     }
 
-    private updateEntity(entity: any, updateAction: any) {
+    private updateEntity(entity: UniEntityWithOptionalId<T>, updateAction: Partial<T>) {
         this.reverseIndexMap.set(entity, []);
         for (const index of this.matchedIndexes) {
             const values: string[] = [];
@@ -135,8 +145,11 @@ export class EntityCollection {
                     values.push(entity[prop])
                 }
             }
-
             this.addNewIndex(index.propNames, values, entity);
+        }
+
+        if(this.reverseIndexMap.size === 0){
+            this.reverseIndexMap.delete(entity);
         }
 
         for(const prop in updateAction){
@@ -149,11 +162,11 @@ export class EntityCollection {
      * 
      * * BE AWARE: `query` condition must match a index
      */
-    findOne(query: any): any {
+    findOne(query: Partial<T & UniEntityPart>): T & UniEntityPart {
         return this.find(query)[0];
     }
 
-    findAndUpdate(findQuery: any, updateAction: any): void {
+    findAndUpdate(findQuery: Partial<T & UniEntityPart>, updateAction: Partial<T>): void {
         const entities = this.find(findQuery);
         if (!entities) return;
         if(entities[0] === undefined) return;
@@ -165,7 +178,11 @@ export class EntityCollection {
         }
     }
 
-    findAndRemove(findQuery: any): void{
+    findAndRemove(findQuery: Partial<T & UniEntityPart>): void {
+        return this.removeWhere(findQuery);
+    }
+
+    removeWhere(findQuery: Partial<T & UniEntityPart>): void{
         const entities = this.find(findQuery);
         if (!entities) return;
 
@@ -175,7 +192,14 @@ export class EntityCollection {
         }
     }
 
-    private removeEntitiesIndexes(entities: any[]){
+    remove(entity: UniEntityWithOptionalId<T>){
+        if(entity.id === undefined) return;
+
+        this.removeEntitiesIndexes([entity]);
+        this.idMap.delete(entity.id);
+    }
+
+    private removeEntitiesIndexes(entities: UniEntityWithOptionalId<T>[]){
         for(const entity of entities) {
             for(const index of this.reverseIndexMap.get(entity)){
                 const set = this.indexMap.get(index);

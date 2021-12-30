@@ -1,4 +1,3 @@
-import { Entity } from './memory-database';
 import { ServerSideController } from './server-controller';
 import { ServerSideManager } from './server-manager';
 
@@ -10,6 +9,8 @@ export interface Provider {
 	key: any;
 	value: any;
 }
+
+type Entity = any;
 
 export type ServerControllerClass = ClassOf<ServerSideController>;
 

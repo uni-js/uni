@@ -141,7 +141,7 @@ describe("collection test",() => {
         })
 
         expect(collection.find({family: "family"}).length).toBe(100)
-        collection.findAndRemove({ name: "jason" });
+        collection.removeWhere({ name: "jason" });
         expect(collection.find({family: "family"}).length).toBe(50)
         for(let i=50;i<100;i++){
             const results = collection.find({age: i});
@@ -245,7 +245,7 @@ describe("collection test",() => {
         expect(collection.findOne({ id: 1 })).toBe(entity2);
 
         collection.findAndUpdate({ name: "zhy" }, { name: "zhy2" });
-        collection.findAndRemove({ id : 0 })
+        collection.removeWhere({ id : 0 })
 
         expect(collection.find({ name: "zhy2" }).length).toBe(1);
         expect(collection.findOne({ name: "zhy2" })).toBe(entity2);
@@ -265,7 +265,7 @@ describe("collection test",() => {
 
         expect(collection.test_getIndexSize()).toStrictEqual({
             idSize: 2,
-            indexSize: 4,
+            indexSize: 3,
             reverseSize: 2
         })
     })
@@ -313,11 +313,41 @@ describe("collection test",() => {
             reverseSize: 1
         })
 
-        collection.findAndRemove({ tigerFamily: "family", tigerBelongs: "belongs" })
+        collection.removeWhere({ tigerFamily: "family", tigerBelongs: "belongs" })
         expect(collection.test_getIndexSize()).toStrictEqual({
             idSize: 0,
             indexSize: 0,
             reverseSize: 0
         })
+    })
+
+    it("object update", () => {
+        @Entity()
+        class CoolEntity{
+            @Index()
+            @Property()
+            name: string;
+
+            @Index()
+            @Property()
+            isCool: boolean;
+        }
+
+        const db = new UniDatabase([CoolEntity]);
+        const newEntity = new CoolEntity();
+        const col = db.collection(CoolEntity);
+        
+        newEntity.name = "jack";
+        newEntity.isCool = true;
+
+        col.update(newEntity);
+        expect((newEntity as any).id).toBe(0);
+
+        newEntity.isCool = false;
+        col.update(newEntity)
+
+        expect(col.findOne({ isCool: true })).toBe(undefined);
+        expect(col.findOne({ isCool: false })).toBe(newEntity);
+        
     })
 })

@@ -3,7 +3,7 @@ import { DelayedEventBus, EventBusServer, EventBusServerSymbol, IEventBus } from
 import { Container } from 'inversify';
 import { bindToContainer, resolveAllBindings } from './inversify';
 import { ServerSideManager } from './server-manager';
-import { bindCollectionsTo, createMemoryDatabase, IMemoryDatabase, MemoryDatabaseSymbol } from './memory-database';
+import { bindCollectionsTo, createMemoryDatabase, MemoryDatabaseSymbol } from './memory-database';
 import { ServerSideController } from './server-controller';
 import { getIsServerUseDelay, getServerDebugDelay, isDebugMode } from './debug';
 import { EntityClass, Provider, resolveServerSideModule, ServerControllerClass, ServerManagerClass, ServerSideModule } from './module';
@@ -20,7 +20,7 @@ export interface ServerApplicationOption {
 }
 
 export class ServerApp {
-	private mdb: IMemoryDatabase;
+	private mdb: any;
 
 	private entities: EntityClass[] = [];
 	private managers: ServerManagerClass[] = [];

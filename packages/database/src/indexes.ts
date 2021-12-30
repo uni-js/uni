@@ -1,9 +1,18 @@
-import { getSuperEntity, getTopEntity } from "./entity";
-
 export const EntityIndexesSymbol = Symbol();
 
 export interface EntityIndex{
     propNames: string[]
+}
+
+function isArraysEqual(a: any, b: any) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length !== b.length) return false;
+
+    for (var i = 0; i < a.length; ++i) {
+        if (!a.includes(b[i])) return false;
+    }
+    return true;
 }
 
 /**
@@ -16,20 +25,23 @@ export function Index(propNames?: string[]) {
         const isUnion = propKey === undefined;
         const targetClass = isUnion ? target : target.constructor;
 
-        let indexes: EntityIndex[] = Reflect.getMetadata(EntityIndexesSymbol, targetClass);
-        if(!indexes){
-            indexes = [];
-            Reflect.defineMetadata(EntityIndexesSymbol, indexes, targetClass);
+        let indexes: EntityIndex[] = Reflect.getMetadata(EntityIndexesSymbol, targetClass) || [];
+        const indexPropNames = isUnion ? propNames : [ propKey ];
+
+        let exists = false;
+        for(const oldIndex of indexes){
+            if(isArraysEqual(oldIndex, indexes)){
+                exists = true;
+                break;
+            }
+
         }
-        if(isUnion) {
-            indexes.push({
-                propNames
-            })
-        }else{
-            indexes.push({
-                propNames: [ propKey ]
-            })
+        
+        if(!exists){
+            indexes.push({ propNames: indexPropNames });
         }
+
+        Reflect.defineMetadata(EntityIndexesSymbol, indexes, targetClass);
     }
 }
 
