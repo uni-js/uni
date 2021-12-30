@@ -112,6 +112,18 @@ export class EntityCollection {
         this.updateEntity(entity, entity)
     }
 
+    /**
+     * only for test
+     * @deprecated
+     */
+    test_getIndexSize() {
+        return {
+            indexSize: this.indexMap.size,
+            idSize: this.idMap.size,
+            reverseSize: this.reverseIndexMap.size        
+        };
+    }
+
     private updateEntity(entity: any, updateAction: any) {
         this.reverseIndexMap.set(entity, []);
         for (const index of this.matchedIndexes) {

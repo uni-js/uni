@@ -36,6 +36,13 @@ describe("collection test",() => {
         }
         const results = collection.find({name: "wyatt"});
         expect(results.length).toBe(100);
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 100,
+            indexSize: 100 + 1,
+            reverseSize: 100
+        })
+
     })
 
     it("update and find", () => {
@@ -83,6 +90,13 @@ describe("collection test",() => {
         }
         expect(collection.find({ name: "wyatt" }).length).toBe(0);
         expect(collection.find({ name: "zhy" }).length).toBe(100);
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 100,
+            indexSize: 200 + 1,
+            reverseSize: 100
+        })
+
     })
 
     it("find and remove", () => {
@@ -119,7 +133,13 @@ describe("collection test",() => {
                 family: "family"
             })
         }
-        
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 100,
+            indexSize: 100 + 1 + 1 + 1,
+            reverseSize: 100
+        })
+
         expect(collection.find({family: "family"}).length).toBe(100)
         collection.findAndRemove({ name: "jason" });
         expect(collection.find({family: "family"}).length).toBe(50)
@@ -130,6 +150,12 @@ describe("collection test",() => {
             expect(results[0].age).toBe(i);
             expect(results[0].family).toBe("family");
         }
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 50,
+            indexSize: 50 + 1 + 1,
+            reverseSize: 50
+        })
     });
     
     it("union index", () => {
@@ -176,6 +202,12 @@ describe("collection test",() => {
 
             expect(collection.find({ x: i , y: i * 2 }).length).toBe(0);
         }
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 50,
+            indexSize: 50,
+            reverseSize: 50
+        })
     })
 
     it("add entity by update", () => {
@@ -230,6 +262,12 @@ describe("collection test",() => {
         expect(results.length).toBe(2);
         expect(entity2.id).toBe(1);
         expect(entity.id).toBe(2);
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 2,
+            indexSize: 4,
+            reverseSize: 2
+        })
     })
 
     it("extending", () => {
@@ -268,5 +306,18 @@ describe("collection test",() => {
         expect(collection.findOne({ x: 5 }).name).toBe("tigerA");
         expect(collection.findOne({ tigerAge: 10 }).x).toBe(5);
         expect(collection.findOne({ tigerFamily: "family", tigerBelongs: "belongs" }).tigerAge).toBe(10);
+
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 1,
+            indexSize: 4,
+            reverseSize: 1
+        })
+
+        collection.findAndRemove({ tigerFamily: "family", tigerBelongs: "belongs" })
+        expect(collection.test_getIndexSize()).toStrictEqual({
+            idSize: 0,
+            indexSize: 0,
+            reverseSize: 0
+        })
     })
 })
