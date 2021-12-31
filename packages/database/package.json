@@ -8,6 +8,9 @@
     "build": "tsc",
     "prepare": "yarn build"
   },
+  "dependencies": {
+    "@uni.js/server": "^0.1.0"
+  },
   "devDependencies": {
     "@types/reflect-metadata": "^0.1.0"
   }

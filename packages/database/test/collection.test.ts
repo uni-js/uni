@@ -1,5 +1,5 @@
 import { Entity, Property } from "../src/entity";
-import { UniDatabase } from "../src/database"
+import { UniMemoryDatabase } from "../src/database"
 import { Index } from "../src/indexes";
 
 
@@ -16,7 +16,7 @@ describe("collection test",() => {
             age: number;
         }
 
-        const db = new UniDatabase([TestEntity]);
+        const db = new UniMemoryDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         for(let i = 0; i  < 100; i++){
@@ -61,7 +61,7 @@ describe("collection test",() => {
             realAge: number;
         }
 
-        const db = new UniDatabase([TestEntity]);
+        const db = new UniMemoryDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         for(let i = 0; i  < 100; i++){
@@ -115,7 +115,7 @@ describe("collection test",() => {
             family: string;
         }
 
-        const db = new UniDatabase([TestEntity]);
+        const db = new UniMemoryDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
         
         for(let i=0;i<50;i++){
@@ -173,7 +173,7 @@ describe("collection test",() => {
             y: number;
         }
 
-        const db = new UniDatabase([GameObjectEntity]);
+        const db = new UniMemoryDatabase([GameObjectEntity]);
         const collection = db.collection(GameObjectEntity);
 
         for(let i=50;i<100;i++){
@@ -222,7 +222,7 @@ describe("collection test",() => {
             age: number;
         }
 
-        const db = new UniDatabase([TestEntity]);
+        const db = new UniMemoryDatabase([TestEntity]);
         const collection = db.collection(TestEntity);
 
         const entity: any = {
@@ -296,7 +296,7 @@ describe("collection test",() => {
             tigerBelongs: string;
         }
 
-        const db = new UniDatabase([Animal, Tiger]);
+        const db = new UniMemoryDatabase([Animal, Tiger]);
 
         expect(db.collection(Animal)).toBe(db.collection(Tiger));
         db.collection(Tiger).insertOne({ x: 5, name: "tigerA",  tigerAge: 10, tigerFamily: "family", tigerBelongs: "belongs" });
@@ -333,7 +333,7 @@ describe("collection test",() => {
             isCool: boolean;
         }
 
-        const db = new UniDatabase([CoolEntity]);
+        const db = new UniMemoryDatabase([CoolEntity]);
         const newEntity = new CoolEntity();
         const col = db.collection(CoolEntity);
         

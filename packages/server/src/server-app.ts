@@ -1,9 +1,8 @@
 import { DelayedEventBus, EventBusServer, EventBusServerSymbol, IEventBus } from './bus-server';
 
-import { Container } from 'inversify';
+import { Container, interfaces } from 'inversify';
 import { bindToContainer, resolveAllBindings } from './inversify';
 import { ServerSideManager } from './server-manager';
-import { bindCollectionsTo, createMemoryDatabase, MemoryDatabaseSymbol } from './memory-database';
 import { ServerSideController } from './server-controller';
 import { getIsServerUseDelay, getServerDebugDelay, isDebugMode } from './debug';
 import { EntityClass, Provider, resolveServerSideModule, ServerControllerClass, ServerManagerClass, ServerSideModule } from './module';
@@ -14,21 +13,25 @@ function wait(time: number) {
 	return new Promise((resolve) => setTimeout(resolve, time));
 }
 
+export interface PluginContext {
+    app: ServerApp
+}
+
+export type UniServerPlugin = (context: PluginContext) => any;
+
 export interface ServerApplicationOption {
 	port: number;
 	module: ServerSideModule;
 }
 
 export class ServerApp {
-	private mdb: any;
-
 	private entities: EntityClass[] = [];
 	private managers: ServerManagerClass[] = [];
 	private controllers: ServerControllerClass[] = [];
 	private providers: Provider[] = [];
 
 	private eventBus: IEventBus;
-	private iocContainer: Container;
+	private ioc: Container;
 
 	private tick = 0;
 
@@ -49,14 +52,13 @@ export class ServerApp {
 		}
 
 		this.eventBus = getIsServerUseDelay() ? new DelayedEventBus() : new EventBusServer();
-		this.mdb = createMemoryDatabase(this.entities);
 
 		this.initInversifyContainer();
 	}
 
 	start() {
-		resolveAllBindings(this.iocContainer, this.managers);
-		resolveAllBindings(this.iocContainer, this.controllers);
+		resolveAllBindings(this.ioc, this.managers);
+		resolveAllBindings(this.ioc, this.controllers);
 
 		this.eventBus.listen(this.option.port);
 		this.startLoop();
@@ -64,20 +66,37 @@ export class ServerApp {
 		Logger.info(`Server has started.`);
 	}
 
+	getOption() {
+		return this.option;
+	}
+
+	add(key: any, value: any) {
+		this.ioc.bind(key).toConstantValue(value);
+	}
+
+	get<T>(identifier: interfaces.ServiceIdentifier<T>) {
+		return this.ioc.get(identifier);
+	}
+
+	async use(plugin: UniServerPlugin) {
+		const context: PluginContext = {
+			app: this
+		}
+
+		await plugin(context);
+	}
+
 	private initInversifyContainer() {
 		const ioc = new Container({ skipBaseClassChecks: true });
-
-		ioc.bind(MemoryDatabaseSymbol).toConstantValue(this.mdb);
 		ioc.bind(EventBusServerSymbol).toConstantValue(this.eventBus);
 
-		bindCollectionsTo(ioc, this.entities, this.mdb);
 		bindToContainer(ioc, [...this.managers, ...this.controllers]);
 
 		for (const provider of this.providers) {
 			ioc.bind(provider.key).toConstantValue(provider.value);
 		}
 
-		this.iocContainer = ioc;
+		this.ioc = ioc;
 	}
 
 	private async startLoop() {
@@ -88,11 +107,11 @@ export class ServerApp {
 
 			try {
 				for (const manager of this.managers) {
-					const singleton: ServerSideManager = this.iocContainer.get(manager);
+					const singleton: ServerSideManager = this.ioc.get(manager);
 					singleton.doTick(this.tick);
 				}
 				for (const controller of this.controllers) {
-					const singleton: ServerSideController = this.iocContainer.get(controller);
+					const singleton: ServerSideController = this.ioc.get(controller);
 					singleton.doTick(this.tick);
 				}
 			} catch (err: any) {

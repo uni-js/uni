@@ -14,7 +14,7 @@ function buildIndexKey(propNames: string[], types: string[], values: (string | n
     return key;
 }
 
-export class UniDatabase {
+export class UniMemoryDatabase {
     private collections = new Map<any, EntityCollection>();
 
     constructor(private entityClasses: any[]) {
