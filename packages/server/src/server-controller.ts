@@ -3,7 +3,6 @@ import {
 	ExternalEvent,
 	EXTERNAL_EVENT_HANDLER,
 	GameEventEmitter,
-	convertInternalToExternalEvent,
 	getHandledEventBounds,
 	InternalEvent,
 } from '@uni.js/event';
@@ -37,10 +36,9 @@ export class ServerSideController extends GameEventEmitter {
 		targetConnIdsProvider: TargetConnIdsProvider<I>,
 	) {
 		from.onEvent(internalEvent, (event: I) => {
-			const remoteEvent = convertInternalToExternalEvent(event, internalEvent, externalEvent);
 			const connIdsRet = targetConnIdsProvider(event);
 			const connIds = typeof connIdsRet == 'string' ? [connIdsRet] : connIdsRet;
-			this.eventBus.emitTo(connIds, remoteEvent);
+			this.eventBus.emitToByName(connIds, externalEvent.name, event);
 		});
 	}
 

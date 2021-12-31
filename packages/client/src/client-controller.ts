@@ -4,7 +4,6 @@ import {
 	GameEventEmitter,
 	InternalEvent,
 	EXTERNAL_EVENT_HANDLER,
-	convertInternalToExternalEvent,
 	getHandledEventBounds,
 } from '@uni.js/event';
 
@@ -37,8 +36,7 @@ export class ClientSideController extends GameEventEmitter {
 		externalEvent: ClassOf<E>,
 	) {
 		from.onEvent(internalEvent, (event: I) => {
-			const remoteEvent = convertInternalToExternalEvent(event, internalEvent, externalEvent);
-			this.eventBus.emitBusEvent(remoteEvent);
+			this.eventBus.emitBusEventByName(externalEvent.name, event);
 		});
 	}
 }

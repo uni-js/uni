@@ -17,6 +17,8 @@ export const enum BusEvent {
 export interface IEventBus extends GameEventEmitter {
 	emitTo(connIds: string[], event: ExternalEvent): void;
 	emitToAll(event: ExternalEvent): void;
+	emitToByName(connIds: string[], eventName: string, eventPayload: any): void;
+	emitToAllByName(eventName: string, eventPayload: any): void;
 	listen(port: number): void;
 }
 
@@ -55,16 +57,24 @@ export class EventBusServer extends GameEventEmitter implements IEventBus {
 		return this.map.get(connId);
 	}
 
-	emitTo(connIds: string[], event: ExternalEvent) {
+	emitTo(connIds: string[], event: ExternalEvent){
+		this.emitToByName(connIds, event.constructor.name, event);
+	}
+
+	emitToAll(event: ExternalEvent): void {
+		this.emitToAllByName(event.constructor.name, event);
+	}
+
+	emitToByName(connIds: string[], eventName: string, eventPayload: any) {
 		for (const id of connIds) {
 			const conn = this.getConnection(id);
 			if (!conn) continue;
-			conn.emit(event.constructor.name, event);
+			conn.emit(eventName, eventPayload);
 		}
 	}
 
-	emitToAll(event: ExternalEvent) {
-		this.emitTo(Array.from(this.map.keys()), event);
+	emitToAllByName(eventName: string, eventPayload: any) {
+		this.emitToByName(Array.from(this.map.keys()), eventName, eventPayload);
 	}
 
 	listen(port: number): void{
@@ -76,7 +86,8 @@ export class EventBusServer extends GameEventEmitter implements IEventBus {
 export interface DelayedRequest {
 	emitToAll: boolean;
 	connIds: string[];
-	event: ExternalEvent;
+	eventName: string;
+	event: any;
 }
 
 export class DelayedEventBus extends GameEventEmitter implements IEventBus {
@@ -98,29 +109,39 @@ export class DelayedEventBus extends GameEventEmitter implements IEventBus {
 			while (this.requestQueue.length > 0) {
 				const request = this.requestQueue.shift();
 				if (request.emitToAll) {
-					this.eventBus.emitToAll(request.event);
+					this.eventBus.emitToAllByName(request.eventName, request.event);
 				} else {
-					this.eventBus.emitTo(request.connIds, request.event);
+					this.eventBus.emitToByName(request.connIds, request.eventName, request.event);
 				}
 			}
 			await wait(getServerDebugDelay());
 		}
 	}
 
-	emitTo(connIds: string[], event: ExternalEvent): void {
+	emitToByName(connIds: string[], eventName: string, eventPayload: any)	{
 		this.requestQueue.push({
 			emitToAll: false,
 			connIds,
-			event,
+			eventName,
+			event: eventPayload
 		});
 	}
 
-	emitToAll(event: ExternalEvent): void {
+	emitToAllByName(eventName: string, eventPayload: any): void {
 		this.requestQueue.push({
 			emitToAll: true,
 			connIds: [],
-			event,
+			eventName,
+			event: eventPayload
 		});
+	}
+
+	emitTo(connIds: string[], event: ExternalEvent){
+		this.emitToByName(connIds, event.constructor.name, event);
+	}
+
+	emitToAll(event: ExternalEvent): void {
+		this.emitToAllByName(event.constructor.name, event);
 	}
 
 	listen(port: number): void {

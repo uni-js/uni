@@ -48,16 +48,6 @@ export function copyOwnPropertiesTo(from: any, target: any) {
 	}
 }
 
-export function convertInternalToExternalEvent<I extends InternalEvent, E extends ExternalEvent>(
-	internalEvent: I,
-	internaleventClass: ClassOf<I>,
-	externaleventClass: ClassOf<E>,
-) {
-	const exEvent = new externaleventClass();
-	copyOwnPropertiesTo(internalEvent, exEvent);
-	return exEvent;
-}
-
 export class GameEventEmitter extends EventEmitter2 {
 	[IS_GAME_EVENT_EMITTER] = true;
 
