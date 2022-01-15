@@ -1,0 +1,21 @@
+{
+  "name": "@uni.js/texture-webpack-loader",
+  "version": "0.1.0",
+  "main": "./lib/index.js",
+  "typings": "./lib/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "yarn build"
+  },
+  "dependencies": {
+    "filehound": "^1.17.5",
+    "js-string-escape": "^1.0.1",
+    "webpack": "^5.65.0",
+    "@uni.js/texture": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/js-string-escape": "^1.0.1",
+    "@types/webpack": "^5.28.0"
+  }
+}

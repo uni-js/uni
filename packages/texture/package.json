@@ -9,6 +9,11 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@uni.js/client": "^0.1.0"
+    "@uni.js/client": "^0.1.0",
+    "axios": "^0.24.0",
+    "urijs": "^1.19.7"
+  },
+  "devDependencies": {
+    "@types/urijs": "^1.19.17"
   }
 }

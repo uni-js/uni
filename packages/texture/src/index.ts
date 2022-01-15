@@ -1,12 +1,31 @@
-import { injectable } from 'inversify';
 import * as PIXI from 'pixi.js';
-import * as Path from 'path';
-import Pupa from 'pupa';
+
+import { injectable } from 'inversify';
 import { PluginContext, UniClientPlugin } from "@uni.js/client"
 
-export enum TextureType {
-	IMAGE,
-	IMAGESET,
+export interface ClipRect{
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
+export interface TextureItem{
+	relKey: string;
+	fullKey: string;
+	clipRect: ClipRect;
+	url: string;
+}
+
+export interface TextureModule {
+	baseKey: string;
+	items: TextureItem[];
+}
+
+export interface TextureStoredItem {
+	key: string;
+	url: string;
+	texture: PIXI.Texture;
 }
 
 export async function LoadResource(url: string) {
@@ -22,103 +41,102 @@ export async function LoadResource(url: string) {
 	return resource;
 }
 
-export interface TextureItem {
-	isJsonUrl: boolean;
-	url: string;
-	textures: PIXI.Texture[];
-}
 
 @injectable()
 export class TextureProvider {
-	private textures = new Map<string, TextureItem>();
+	private groupTextures = new Map<string, TextureStoredItem[]>();
+	private textureMap = new Map<string, TextureStoredItem>();
 	constructor() {}
 
-	async add(name: string, url: string) {
+	private parseKey(key: string) : [string, string] {
+		const slices = key.split(".");
+		const itemName = slices.pop();
+		const groupKey = slices.join(".");
+		return [groupKey, itemName];
+	}
+
+	async add(key: string, url: string) {
 		const resource = await LoadResource(url);
 		const texture = resource.texture;
-		this.textures.set(name, { url, isJsonUrl: false, textures: [texture] });
-	}
+		const [groupKey, name] = this.parseKey(key);
 
-	async addJSON(name: string, json_url: string) {
-		const resource = await LoadResource(json_url);
-		this.textures.set(name, { url: json_url, isJsonUrl: true, textures: Object.values(resource.textures) });
-	}
-
-	getGroup(name_pattern: string, count: number) {
-		const group = [];
-		for (let order = 0; order < count; order++) {
-			const name = Pupa(name_pattern, { order });
-			const texture = this.getOne(name);
-			if (!texture) return;
-			group.push(texture);
+		let group = this.groupTextures.get(groupKey);
+		if(!group){
+			group = [];
+			this.groupTextures.set(groupKey, group);
 		}
-		return group;
+
+		group.push({ key, texture, url });
+
+		this.textureMap.set(key, { key, texture, url });
+		this.updateGroupOrder(groupKey)
 	}
 
-	get(name: string): PIXI.Texture[] | undefined {
-		if (!this.textures.has(name)) return;
+	private updateGroupOrder(groupKey: string) {
+		const group = this.groupTextures.get(groupKey);
+		if(!group) return;
 
-		return this.textures.get(name)?.textures;
+		group.sort((a,b)=>{
+			if(a.key.length < b.key.length){
+				return -1;
+			}else if(a.key.length > b.key.length){
+				return 1;
+			}else{
+				return a.key < b.key ? -1 : 1;
+			}
+		});
 	}
 
-	getOne(name: string): PIXI.Texture | undefined {
-		const textures = this.get(name);
-		if (!textures || !textures[0]) return;
-
-		return textures[0];
+	get(key: string): PIXI.Texture | undefined {
+		return this.textureMap.get(key)?.texture;
 	}
 
-	getItem(name: string) {
-		return this.textures.get(name);
+	getGroup(groupKey: string): PIXI.Texture[]{
+		const group = this.groupTextures.get(groupKey);
+		if(!group) return;
+		return group.map((x) => (x.texture));
+	}
+
+	getUrl(key: string): string | undefined {
+		return this.textureMap.get(key)?.url;
+
+	}
+
+	getGroupUrls(groupKey: string): string[] {
+		const group = this.groupTextures.get(groupKey);
+		if(!group) return;
+		return group.map((x) => (x.url));
 	}
 }
 
 export class TextureLoader{
 	constructor(private provider: TextureProvider) { }
 
-	async loadFromPaths(texturePaths: string[]) {
-		for (const path of texturePaths) {
-			const parsed = this.parseTexturePath(path);
-			if (Boolean(parsed) === false) continue;
-			const [key, relPath, type] = parsed;
-			if (type == TextureType.IMAGESET) {
-				await this.provider.addJSON(key, relPath);
-			} else {
-				await this.provider.add(key, relPath);
-			}
+	/**
+	 * import a texture module from specified path
+	 */
+	async import(module: TextureModule) {		
+		for(const item of module.items){
+			await this.provider.add(item.fullKey, item.url);
 		}
 	}
 
-	private parseTexturePath(texturePath: string): [string, string, TextureType] | undefined {
-		const relPath = Path.join('texture', texturePath);
-		const parsed = Path.parse(texturePath);
-
-		const splited = parsed.name.split('.');
-
-		const isSet = splited[splited.length - 1] == 'set';
-		const isSetJson = parsed.ext === '.json';
-
-		if (isSet) {
-			const setName = splited.slice(0, splited.length - 1).join('.');
-			const joined = Path.join(Path.dirname(parsed.dir), setName);
-			const key = joined.replace(new RegExp('/', 'g'), '.');
-
-			if (isSetJson) return [key, relPath, TextureType.IMAGESET];
-		} else {
-			const joined = Path.join(parsed.dir, parsed.name);
-			const key = joined.replace(new RegExp('/', 'g'), '.');
-
-			return [key, relPath, TextureType.IMAGE];
-		}
-	}
 }
 
-export function TexturePlugin(texturePaths: any[]) : UniClientPlugin {
+export interface TexturePluginOption{
+	imports: TextureModule[];
+}
+
+export function TexturePlugin(option: TexturePluginOption) : UniClientPlugin {
 	return async function(context: PluginContext) {
 		const app = context.app;
 		const textureProvider = new TextureProvider();
 		
-		await new TextureLoader(textureProvider).loadFromPaths(texturePaths);
+		const loader = new TextureLoader(textureProvider);
+		for(const module of option.imports){
+			await loader.import(module);
+		}
+
 		app.add(TextureProvider, textureProvider);
 	}
 }

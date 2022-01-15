@@ -87,6 +87,5 @@ export function useUIState<E>(cls: new () => E): UIStateWithMetaInfo<E> {
 }
 
 export function useTexturePath(provider: TextureProvider, key: string) {
-	const item = provider.getItem(key);
-	return item?.url;
+	return provider.getUrl(key);
 }
