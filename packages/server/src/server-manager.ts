@@ -1,7 +1,6 @@
 import { GameEventEmitter } from '@uni.js/event';
 
-
-export class ServerSideManager extends GameEventEmitter {
+export class ServerSideManager<T extends Record<string, any> = any> extends GameEventEmitter<T> {
 	constructor() {
 		super();
 	}

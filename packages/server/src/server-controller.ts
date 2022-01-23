@@ -4,14 +4,13 @@ import {
 	EXTERNAL_EVENT_HANDLER,
 	GameEventEmitter,
 	getHandledEventBounds,
-	InternalEvent,
 } from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
 
 export type TargetConnIdsProvider<T> = (param: T) => string[] | string;
 
-export class ServerSideController extends GameEventEmitter {
+export class ServerSideController<T extends Record<string, any> = any> extends GameEventEmitter<T> {
 	constructor(protected eventBus: IEventBus) {
 		super();
 
@@ -21,7 +20,7 @@ export class ServerSideController extends GameEventEmitter {
 	private initExternalHandledEvents() {
 		const bounds = getHandledEventBounds(this, EXTERNAL_EVENT_HANDLER);
 		for (const bound of bounds) {
-			this.eventBus.onEvent(bound.eventClass, bound.bindToMethod.bind(this));
+			this.eventBus.on(bound.eventClassName, bound.bindToMethod.bind(this));
 		}
 	}
 
@@ -29,13 +28,13 @@ export class ServerSideController extends GameEventEmitter {
 	 * redirect the event received,
 	 * and publish the event to network event bus.
 	 */
-	protected redirectToBusEvent<I extends InternalEvent, E extends ExternalEvent & InternalEvent>(
+	protected redirectToBusEvent<E extends ExternalEvent>(
 		from: GameEventEmitter,
-		internalEvent: ClassOf<I>,
+		eventName: string,
 		externalEvent: ClassOf<E>,
-		targetConnIdsProvider: TargetConnIdsProvider<I>,
+		targetConnIdsProvider: TargetConnIdsProvider<any>,
 	) {
-		from.onEvent(internalEvent, (event: I) => {
+		from.on(eventName, (event: any) => {
 			const connIdsRet = targetConnIdsProvider(event);
 			const connIds = typeof connIdsRet == 'string' ? [connIdsRet] : connIdsRet;
 			this.eventBus.emitToByName(connIds, externalEvent.name, event);

@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "@types/reflect-metadata": "^0.1.0"
+  },
+  "dependencies": {
+    "tiny-typed-emitter": "^2.1.0"
   }
 }

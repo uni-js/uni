@@ -1,7 +1,7 @@
 import { EntityIndex } from "./indexes";
 import { getTopEntity, isEntity } from "./entity";
 import { EntityMetadata, getEntityMetadata } from "./metadata";
-import { UniEntity, UniEntityPart, UniEntityWithOptionalId } from ".";
+import { UniEntity, UniEntityPart, UniEntityWithOptionalId } from "./entity";
 
 const HashKeySplitChar = "#";
 

@@ -1,16 +1,19 @@
 import "reflect-metadata";
 
-import { EventEmitter2 } from 'eventemitter2';
+import { TypedEmitter } from 'tiny-typed-emitter';
+
+export type EventMap<T> = {
+	[key in keyof T]: (event: T[key]) => void;
+}
 
 type ClassOf<T> = { new (...args: any[]): T };
 
-export class InternalEvent {}
-
-export class ExternalEvent extends InternalEvent {}
+export class ExternalEvent {}
 
 export interface EventBound {
 	bindToMethod: (...args: any[]) => void;
 	eventClass: ClassOf<any>;
+	eventClassName: string;
 	[key: string]: any;
 }
 
@@ -23,12 +26,12 @@ export const IS_GAME_EVENT_EMITTER = Symbol();
  *
  * @param eventClass the event class specified
  */
-export function HandleExternalEvent<T extends ExternalEvent>(eventClass: ClassOf<T>) {
-	return Reflect.metadata(EXTERNAL_EVENT_HANDLER, { eventClass });
+export function HandleRemoteEvent<T extends ExternalEvent>(eventClass: ClassOf<T>) {
+	return Reflect.metadata(EXTERNAL_EVENT_HANDLER, { eventClass, eventClassName: eventClass.name });
 }
 
-export function HandleInternalEvent<T extends InternalEvent>(emitterPropertyName: string, eventClass: ClassOf<T>) {
-	return Reflect.metadata(INTERNAL_EVENT_HANDLER, { emitterPropertyName, eventClass });
+export function HandleEvent(emitterPropertyName: string, eventClassName: string) {
+	return Reflect.metadata(INTERNAL_EVENT_HANDLER, { emitterPropertyName, eventClassName });
 }
 
 export function getHandledEventBounds(object: any, sign: symbol): EventBound[] {
@@ -48,7 +51,7 @@ export function copyOwnPropertiesTo(from: any, target: any) {
 	}
 }
 
-export class GameEventEmitter extends EventEmitter2 {
+export class GameEventEmitter<T extends Record<string, any> = any> extends TypedEmitter<EventMap<T>> {
 	[IS_GAME_EVENT_EMITTER] = true;
 
 	constructor() {
@@ -61,49 +64,28 @@ export class GameEventEmitter extends EventEmitter2 {
 		const bounds = getHandledEventBounds(this, INTERNAL_EVENT_HANDLER);
 		for (const bound of bounds) {
 			const emitterName = bound.emitterPropertyName as string;
-			const emitter = emitterName ? (this as any)[emitterName] as GameEventEmitter : this;
+			const emitter = emitterName ? (this as any)[emitterName] as GameEventEmitter<T> : this;
 
 			if(!emitter)
 				throw new Error(`the target emitter ${emitterName} doesn't exists at: ${this.constructor.name}`)
 
 			if (emitter[IS_GAME_EVENT_EMITTER] !== true)
-				throw new Error(`the target emitter is not GameEventEmitter when binding ${bound.eventClass.name}`);
+				throw new Error(`the target emitter is not GameEventEmitter when binding ${bound.eventClass}`);
 
-			emitter.onEvent(bound.eventClass, bound.bindToMethod.bind(this));
+			emitter.on(bound.eventClassName, bound.bindToMethod.bind(this));
 		}
-	}
-
-	onEvent<T extends InternalEvent>(eventClass: ClassOf<T>, listener: (event: T) => void) {
-		this.on(eventClass.name, listener);
-	}
-
-	offEvent<T extends InternalEvent>(eventClass: ClassOf<T>, listener: (event: T) => void) {
-		this.off(eventClass.name, listener);
-	}
-
-	emitEvent<T extends InternalEvent>(eventClass: ClassOf<T>, event: T) {
-		this.emit(eventClass.name, event);
 	}
 
 	/**
 	 * redirect the specified event,
 	 * emit out once received a event
 	 */
-	redirectEvent<T extends InternalEvent>(from: GameEventEmitter, eventClass: ClassOf<T>) {
-		from.onEvent(eventClass, (event: T) => {
-			this.emitEvent(eventClass, event);
-		});
+	redirectEvent(from: GameEventEmitter, eventClass: keyof T) {
+		const listener : any = (...args: any) => {
+			this.emit(eventClass, ...args);
+		};
+		from.on(eventClass, listener);
 	}
-}
-
-export class AddEntityEvent extends InternalEvent {
-	entityId: number;
-	entity: unknown;
-}
-
-export class RemoveEntityEvent extends InternalEvent {
-	entityId: number;
-	entity: unknown;
 }
 
 function getAllMethodsOfObject(object: any) {

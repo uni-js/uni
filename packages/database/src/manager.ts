@@ -1,4 +1,4 @@
-import { AddEntityEvent, RemoveEntityEvent } from "@uni.js/event";
+import { EventMap } from "@uni.js/event";
 import { ServerSideManager } from "@uni.js/server";
 import { UniEntityWithOptionalId } from ".";
 import { EntityCollection } from "./database";
@@ -6,6 +6,22 @@ import { UniEntity, UniEntityPart } from "./entity";
 import { CAN_INJECT_COLLECTION } from "./inject";
 
 type ClassOf<T> = { new (...args: any[]): T };
+
+
+export interface AddEntityEvent<T = any>{
+	entityId: number;
+	entity: T;	
+}
+
+export interface RemoveEntityEvent<T = any>{
+	entityId: number;
+	entity: T;	
+}
+
+export interface EntityBaseEvent<T = any> {
+	"AddEntityEvent": AddEntityEvent<T>;
+	"RemoveEntityEvent": RemoveEntityEvent<T>;
+}
 
 export interface NotLimitCollection<T extends Record<string, any>> extends EntityCollection<T> {}
 
@@ -38,7 +54,7 @@ export interface UpdateOnlyCollection<T extends Record<string, any>> extends Not
 	insertOne(entity: any): any;
 }
 
-export interface IEntityManager<K> extends ServerSideManager {
+export interface IEntityManager<K, E extends EntityBaseEvent<K>> extends ServerSideManager<E> {
 	getEntityById(entityId: number): ReadonlyUniEntity<K>;
 	findEntity(query: ObjectQueryCondition<K>): ReadonlyUniEntity<K>;
 	findEntities(query?: ObjectQueryCondition<K>): ReadonlyUniEntity<K>[];
@@ -54,9 +70,10 @@ export type ReadonlyUniEntity<T> = Readonly<T & UniEntityPart>
 /**
  * entity manager is designed for managing one type of entity
  */
-export class EntityManager<T extends UniEntity> extends ServerSideManager {
+export class EntityManager<T extends UniEntity, E extends EntityBaseEvent<T> = any> extends ServerSideManager<E> {
 	static [CAN_INJECT_COLLECTION] = true;
 
+	private emitter: ServerSideManager<EntityBaseEvent<T>> = this;
 	private entityList: NotLimitCollection<T>;
 
 	/**
@@ -105,14 +122,18 @@ export class EntityManager<T extends UniEntity> extends ServerSideManager {
 
 	addNewEntity(newEntity: UniEntityWithOptionalId<T>): ReadonlyUniEntity<T> {
 		const insertedEntity = this.entityList.insertOne(newEntity);
-		this.emitEvent(AddEntityEvent, { entityId: insertedEntity.id, entity: insertedEntity });
+		this.emitter.emit("AddEntityEvent", { entityId: insertedEntity.id, entity: insertedEntity });
 		return insertedEntity;
 	}
 
 	removeEntity(entity: UniEntityWithOptionalId<T>) {
 		const entityId = entity.id;
 		this.entityList.remove(entity);
-		this.emitEvent(RemoveEntityEvent, { entityId: entityId, entity });
+		
+		this.emitter.emit("RemoveEntityEvent", {
+			entity: entity as any,
+			entityId: entityId as any,
+		});
 	}
 
 	updateEntity(entity: UniEntityWithOptionalId<T>) {
@@ -121,7 +142,13 @@ export class EntityManager<T extends UniEntity> extends ServerSideManager {
 
 }
 
-export class ExtendedEntityManager<T extends UniEntity, K extends T> extends ServerSideManager implements IEntityManager<K> {
+export class ExtendedEntityManager<
+	T extends UniEntity, 
+	K extends T, 
+	KE extends EntityBaseEvent<K> = any
+> extends ServerSideManager<KE> implements IEntityManager<K, KE> {
+	private emitter: ServerSideManager<EntityBaseEvent<T>> = this;
+
 	constructor(private manager: EntityManager<T>, private clazz: ClassOf<K>) {
 		super();
 	}
@@ -159,7 +186,7 @@ export class ExtendedEntityManager<T extends UniEntity, K extends T> extends Ser
 		const inserted = this.manager.addNewEntity(newEntity);
 
 		if (inserted instanceof this.clazz) {
-			this.emitEvent(AddEntityEvent, { entityId: newEntity.id, entity: newEntity });
+			this.emitter.emit("AddEntityEvent", { entityId: newEntity.id, entity: newEntity });
 		}
 		return inserted as ReadonlyUniEntity<K>;
 	}
@@ -169,7 +196,7 @@ export class ExtendedEntityManager<T extends UniEntity, K extends T> extends Ser
 		this.manager.removeEntity(entity);
 
 		if (<any>entity instanceof this.clazz) {
-			this.emitEvent(RemoveEntityEvent, { entityId, entity });
+			this.emitter.emit("RemoveEntityEvent", { entityId, entity });
 		}
 	}
 

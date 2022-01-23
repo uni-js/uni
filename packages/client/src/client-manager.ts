@@ -1,10 +1,8 @@
 import { ObjectStore, HashItem } from './object-store';
-import { GameEventEmitter, InternalEvent } from '@uni.js/event';
+import { GameEventEmitter } from '@uni.js/event';
 import { IGameObject } from './game-object';
 
-type ClassOf<T> = { new (...args: any[]) : T };
-
-export abstract class ClientSideManager extends GameEventEmitter {
+export abstract class ClientSideManager<E extends Record<string, any> = any> extends GameEventEmitter<E> {
 	constructor() {
 		super();
 	}
@@ -13,8 +11,8 @@ export abstract class ClientSideManager extends GameEventEmitter {
 	doFixedUpdateTick(tick: number): void {}
 }
 
-export class GameObjectManager<T extends IGameObject> extends ClientSideManager {
-	private redirectedObjectEvents: ClassOf<InternalEvent>[] = [];
+export class GameObjectManager<T extends IGameObject, E extends Record<string, any> = any> extends ClientSideManager<E> {
+	private redirectedObjectEvents: string[] = [];
 
 	constructor(private objectStore: ObjectStore<T>) {
 		super();
@@ -23,7 +21,7 @@ export class GameObjectManager<T extends IGameObject> extends ClientSideManager 
 	/**
 	 * redirect the event from the specified-type game object
 	 */
-	protected redirectObjectEvent(eventClass: ClassOf<InternalEvent>) {
+	protected redirectObjectEvent(eventClass: string) {
 		this.redirectedObjectEvents.push(eventClass);
 	}
 
@@ -31,8 +29,8 @@ export class GameObjectManager<T extends IGameObject> extends ClientSideManager 
 		this.objectStore.add(gameObject);
 
 		for (const eventClass of this.redirectedObjectEvents) {
-			gameObject.onEvent(eventClass, (event: InternalEvent) => {
-				this.emitEvent(eventClass, event);
+			gameObject.on(eventClass, (...args: any) => {
+				this.emit(eventClass, ...args);
 			});
 		}
 	}
