@@ -9,6 +9,10 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@uni.js/client": "^0.1.0"
+    "@uni.js/client": "^0.1.0",
+    "keyboardjs": "^2.6.4"
+  },
+  "devDependencies": {
+    "@types/keyboardjs": "^2.5.0"
   }
 }

@@ -9,10 +9,11 @@
     "@types/jest": "^27.0.3",
     "jest": "^27.4.5",
     "lerna": "^4.0.0",
-    "ts-jest": "^27.1.2"
+    "ts-jest": "^27.1.2",
+    "wsrun": "^5.2.4"
   },
   "scripts": {
-    "build": "yarn workspaces run build",
+    "build": "yarn wsrun -r -s run build",
     "test": "jest"
   }
 }

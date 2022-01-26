@@ -13,6 +13,7 @@
     "@uni.js/utils": "^0.0.1",
     "chalk": "4.1.2",
     "eventemitter2": "^6.4.5",
-    "loglevel-plugin-prefix": "^0.8.4"
+    "loglevel-plugin-prefix": "^0.8.4",
+    "socket.io-client": "^4.4.1"
   }
 }
