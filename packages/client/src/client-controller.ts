@@ -1,8 +1,8 @@
 import { EventBusClient } from './bus-client';
 import {
-	ExternalEvent,
+	RemoteEvent,
 	GameEventEmitter,
-	EXTERNAL_EVENT_HANDLER,
+	REMOTE_EVENT_HANDLER,
 	getHandledEventBounds,
 } from '@uni.js/event';
 
@@ -16,11 +16,11 @@ export class ClientSideController extends GameEventEmitter {
 	constructor(protected eventBus: EventBusClient) {
 		super();
 
-		this.initExternalHandledEvents();
+		this.initRemoteHandledEvents();
 	}
 
-	private initExternalHandledEvents() {
-		const bounds = getHandledEventBounds(this, EXTERNAL_EVENT_HANDLER);
+	private initRemoteHandledEvents() {
+		const bounds = getHandledEventBounds(this, REMOTE_EVENT_HANDLER);
 		for (const bound of bounds) {
 			this.eventBus.on(bound.eventClassName, bound.bindToMethod.bind(this));
 		}
@@ -29,7 +29,7 @@ export class ClientSideController extends GameEventEmitter {
 	/**
 	 * redirect the event specified, publish the event to event bus on network.
 	 */
-	protected redirectToBusEvent<E extends ExternalEvent>(
+	protected redirectToBusEvent<E extends RemoteEvent>(
 		from: GameEventEmitter,
 		eventName: string,
 		remoteEvent: ClassOf<E>,

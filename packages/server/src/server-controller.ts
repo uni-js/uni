@@ -1,9 +1,11 @@
 import { IEventBus } from './bus-server';
 import {
-	ExternalEvent,
-	EXTERNAL_EVENT_HANDLER,
+	RemoteEvent,
+	LOCAL_EVENT_EMITTER,
+	REMOTE_EVENT_HANDLER,
 	GameEventEmitter,
 	getHandledEventBounds,
+	getLocalEventEmitters
 } from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
@@ -14,13 +16,25 @@ export class ServerSideController<T extends Record<string, any> = any> extends G
 	constructor(protected eventBus: IEventBus) {
 		super();
 
-		this.initExternalHandledEvents();
+		this.initRemoteHandledEvents();
+		nextTick(()=>{
+			this.initLocalEventEmitter();
+		})
 	}
 
-	private initExternalHandledEvents() {
-		const bounds = getHandledEventBounds(this, EXTERNAL_EVENT_HANDLER);
+	private initRemoteHandledEvents() {
+		const bounds = getHandledEventBounds(this, REMOTE_EVENT_HANDLER);
 		for (const bound of bounds) {
 			this.eventBus.on(bound.eventClassName, bound.bindToMethod.bind(this));
+		}
+	}
+
+	private initLocalEventEmitter() {
+		const bounds = getLocalEventEmitters(this);
+		if(!bounds) return;
+		for(const bound of bounds){
+			const emitter = (<any>this)[bound.emitterName];
+			this.redirectToBusEvent(emitter, bound.localEventName, bound.localEventName, bound.bindToMethod);
 		}
 	}
 
@@ -28,18 +42,26 @@ export class ServerSideController<T extends Record<string, any> = any> extends G
 	 * redirect the event received,
 	 * and publish the event to network event bus.
 	 */
-	protected redirectToBusEvent<E extends ExternalEvent>(
+	protected redirectToBusEvent<E extends RemoteEvent>(
 		from: GameEventEmitter,
 		eventName: string,
-		externalEvent: ClassOf<E>,
+		externalEventName: string,
 		targetConnIdsProvider: TargetConnIdsProvider<any>,
 	) {
 		from.on(eventName, (event: any) => {
-			const connIdsRet = targetConnIdsProvider(event);
-			const connIds = typeof connIdsRet == 'string' ? [connIdsRet] : connIdsRet;
-			this.eventBus.emitToByName(connIds, externalEvent.name, event);
+			const connIdsRet = targetConnIdsProvider.call(this, event);
+			if(connIdsRet === undefined){
+				this.eventBus.emitToAllByName(externalEventName, event);
+			}else{
+				const connIds = typeof connIdsRet == 'string' ? [connIdsRet] : connIdsRet;
+				this.eventBus.emitToByName(connIds, externalEventName, event);	
+			}
 		});
 	}
 
 	doTick(tick: number) {}
+}
+
+function nextTick(fn: (...args: any[]) => any) {
+	setTimeout(fn, 0);
 }

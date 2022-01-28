@@ -1,6 +1,6 @@
 import { injectable } from 'inversify';
 import { io } from 'socket.io-client';
-import { ExternalEvent } from '@uni.js/event';
+import { RemoteEvent } from '@uni.js/event';
 import { EventEmitter2 } from 'eventemitter2';
 
 const MsgPackParser = require('socket.io-msgpack-parser');
@@ -20,7 +20,7 @@ export class EventBusClient extends EventEmitter2 {
 		});
 	}
 
-	emitBusEvent(event: ExternalEvent) {
+	emitBusEvent(event: RemoteEvent) {
 		this.emitBusEventByName(event.constructor.name, event);
 	}
 

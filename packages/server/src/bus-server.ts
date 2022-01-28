@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { getServerDebugDelay } from './debug';
 
-import { ExternalEvent } from '@uni.js/event';
+import { RemoteEvent } from '@uni.js/event';
 import { EventEmitter2 } from 'eventemitter2';
 
 const wait = (time: number) => new Promise((resolve) => setTimeout(resolve, time));
@@ -16,8 +16,8 @@ export const enum BusEvent {
 }
 
 export interface IEventBus extends EventEmitter2  {
-	emitTo(connIds: string[], event: ExternalEvent): void;
-	emitToAll(event: ExternalEvent): void;
+	emitTo(connIds: string[], event: RemoteEvent): void;
+	emitToAll(event: RemoteEvent): void;
 	emitToByName(connIds: string[], eventName: string, eventPayload: any): void;
 	emitToAllByName(eventName: string, eventPayload: any): void;
 	listen(port: number): void;
@@ -58,11 +58,11 @@ export class EventBusServer extends EventEmitter2 implements IEventBus {
 		return this.map.get(connId);
 	}
 
-	emitTo(connIds: string[], event: ExternalEvent){
+	emitTo(connIds: string[], event: RemoteEvent){
 		this.emitToByName(connIds, event.constructor.name, event);
 	}
 
-	emitToAll(event: ExternalEvent): void {
+	emitToAll(event: RemoteEvent): void {
 		this.emitToAllByName(event.constructor.name, event);
 	}
 
@@ -137,11 +137,11 @@ export class DelayedEventBus extends EventEmitter2 implements IEventBus {
 		});
 	}
 
-	emitTo(connIds: string[], event: ExternalEvent){
+	emitTo(connIds: string[], event: RemoteEvent){
 		this.emitToByName(connIds, event.constructor.name, event);
 	}
 
-	emitToAll(event: ExternalEvent): void {
+	emitToAll(event: RemoteEvent): void {
 		this.emitToAllByName(event.constructor.name, event);
 	}
 

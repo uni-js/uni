@@ -8,7 +8,7 @@ export type EventMap<T> = {
 
 type ClassOf<T> = { new (...args: any[]): T };
 
-export class ExternalEvent {}
+export class RemoteEvent {}
 
 export interface EventBound {
 	bindToMethod: (...args: any[]) => void;
@@ -17,21 +17,37 @@ export interface EventBound {
 	[key: string]: any;
 }
 
-export const EXTERNAL_EVENT_HANDLER = Symbol();
-export const INTERNAL_EVENT_HANDLER = Symbol();
+export const REMOTE_EVENT_HANDLER = Symbol();
+export const LOCAL_EVENT_HANDLER = Symbol();
+export const LOCAL_EVENT_EMITTER = Symbol();
 export const IS_GAME_EVENT_EMITTER = Symbol();
+
+export function EmitLocalEvent(emitterName: string, localEventName: string) {
+	return (target: any, propertyKey: string) => {
+		let list: any[] = Reflect.getMetadata(LOCAL_EVENT_EMITTER, target);	
+		if(!list){
+			list = [];
+			Reflect.defineMetadata(LOCAL_EVENT_EMITTER, list, target);
+		}
+		list.push({ bindToMethod: target[propertyKey], emitterName, localEventName });
+	}
+}
 
 /**
  * decorate a controller, to add a specified listener of an event and bind it to the method automatically.
  *
  * @param eventClass the event class specified
  */
-export function HandleRemoteEvent<T extends ExternalEvent>(eventClass: ClassOf<T>) {
-	return Reflect.metadata(EXTERNAL_EVENT_HANDLER, { eventClass, eventClassName: eventClass.name });
+export function HandleRemoteEvent<T extends RemoteEvent>(eventClass: ClassOf<T>) {
+	return Reflect.metadata(REMOTE_EVENT_HANDLER, { eventClass, eventClassName: eventClass.name });
 }
 
 export function HandleEvent(emitterPropertyName: string, eventClassName: string) {
-	return Reflect.metadata(INTERNAL_EVENT_HANDLER, { emitterPropertyName, eventClassName });
+	return Reflect.metadata(LOCAL_EVENT_HANDLER, { emitterPropertyName, eventClassName });
+}
+
+export function getLocalEventEmitters(object: any) {
+	return Reflect.getMetadata(LOCAL_EVENT_EMITTER, object);
 }
 
 export function getHandledEventBounds(object: any, sign: symbol): EventBound[] {
@@ -39,7 +55,7 @@ export function getHandledEventBounds(object: any, sign: symbol): EventBound[] {
 	const bounds: EventBound[] = [];
 	for (const method of methods) {
 		const metadata = Reflect.getMetadata(sign, object, method);
-		if (metadata !== undefined) bounds.push({ bindToMethod: object[method], eventClass: metadata.eventClass, ...metadata });
+		if (metadata !== undefined) bounds.push({ bindToMethod: object[method], ...metadata });
 	}
 	return bounds;
 }
@@ -57,11 +73,11 @@ export class GameEventEmitter<T extends Record<string, any> = any> extends Typed
 	constructor() {
 		super();
 
-		nextTick(() => this.initInternalHandledEvents());
+		nextTick(() => this.initLocalHandledEvents());
 	}
 
-	private initInternalHandledEvents() {
-		const bounds = getHandledEventBounds(this, INTERNAL_EVENT_HANDLER);
+	private initLocalHandledEvents() {
+		const bounds = getHandledEventBounds(this, LOCAL_EVENT_HANDLER);
 		for (const bound of bounds) {
 			const emitterName = bound.emitterPropertyName as string;
 			const emitter = emitterName ? (this as any)[emitterName] as GameEventEmitter<T> : this;
