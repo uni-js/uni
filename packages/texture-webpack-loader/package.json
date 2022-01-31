@@ -9,10 +9,10 @@
     "prepare": "yarn build"
   },
   "dependencies": {
+    "@uni.js/texture": "^0.1.0",
     "filehound": "^1.17.5",
     "js-string-escape": "^1.0.1",
-    "webpack": "^5.65.0",
-    "@uni.js/texture": "^0.1.0"
+    "webpack": "^5.65.0"
   },
   "devDependencies": {
     "@types/js-string-escape": "^1.0.1",

@@ -1,6 +1,6 @@
 {
   "name": "@uni.js/server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "author": "<854185073@qq.com>",
@@ -17,7 +17,7 @@
     "@types/reflect-metadata": "^0.1.0"
   },
   "dependencies": {
-    "@uni.js/utils": "^0.0.1",
+    "@uni.js/utils": "^0.1.0",
     "chalk": "^4.1.2",
     "eventemitter2": "^6.4.5",
     "inversify": "^6.0.1",

@@ -1,6 +1,6 @@
 {
   "name": "@uni.js/client",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "license": "MIT",
@@ -9,8 +9,8 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@uni.js/event": "^0.0.1",
-    "@uni.js/utils": "^0.0.1",
+    "@uni.js/event": "^0.1.0",
+    "@uni.js/utils": "^0.1.0",
     "chalk": "4.1.2",
     "eventemitter2": "^6.4.5",
     "loglevel-plugin-prefix": "^0.8.4",

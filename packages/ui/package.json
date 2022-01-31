@@ -1,6 +1,6 @@
 {
   "name": "@uni.js/ui",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "license": "MIT",
@@ -9,6 +9,6 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@uni.js/texture": "^0.0.1"
+    "@uni.js/texture": "^0.1.0"
   }
 }
