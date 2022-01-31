@@ -4,6 +4,7 @@ import {
 	GameEventEmitter,
 	REMOTE_EVENT_HANDLER,
 	getHandledEventBounds,
+	getLocalEventEmitters,
 } from '@uni.js/event';
 
 type ClassOf<T> = { new (...args: any[]): T };
@@ -17,6 +18,18 @@ export class ClientSideController extends GameEventEmitter {
 		super();
 
 		this.initRemoteHandledEvents();
+		nextTick(() => {
+			this.initLocalEventEmitters();
+		})
+	}
+
+	private initLocalEventEmitters() {
+		const bounds = getLocalEventEmitters(this);
+		if(!bounds)return;
+		for(const bound of bounds){
+			const emitter = (<any>this)[bound.emitterName];
+			this.redirectToBusEvent(emitter, bound.localEventName, bound.localEventName);
+		}
 	}
 
 	private initRemoteHandledEvents() {
@@ -32,10 +45,14 @@ export class ClientSideController extends GameEventEmitter {
 	protected redirectToBusEvent<E extends RemoteEvent>(
 		from: GameEventEmitter,
 		eventName: string,
-		remoteEvent: ClassOf<E>,
+		remoteEventName: string,
 	) {
 		from.on(eventName, (event: any) => {
-			this.eventBus.emitBusEventByName(remoteEvent.name, event);
+			this.eventBus.emitBusEventByName(remoteEventName, event);
 		});
 	}
+}
+
+function nextTick(fn: (...args: any[]) => any) {
+	setTimeout(fn, 0);
 }
