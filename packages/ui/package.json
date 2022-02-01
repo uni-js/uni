@@ -9,6 +9,7 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@uni.js/texture": "^0.1.0"
+    "@uni.js/texture": "^0.1.0",
+    "@uni.js/event": "^0.1.0"
   }
 }

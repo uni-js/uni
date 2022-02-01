@@ -20,7 +20,20 @@ export interface EventBound {
 export const REMOTE_EVENT_HANDLER = Symbol();
 export const LOCAL_EVENT_HANDLER = Symbol();
 export const LOCAL_EVENT_EMITTER = Symbol();
+export const OBJECT_EVENT_EMITTER = Symbol();
 export const IS_GAME_EVENT_EMITTER = Symbol();
+
+export function EmitObjectEvent(objectEventName: string) {
+	return (target: any, propertyKey: string) => {
+		let list: any[] = Reflect.getMetadata(OBJECT_EVENT_EMITTER, target);	
+		if(!list){
+			list = [];
+			Reflect.defineMetadata(OBJECT_EVENT_EMITTER, list, target);
+		}
+		list.push({ bindToMethod: target[propertyKey], objectEventName });
+	}
+
+}
 
 export function EmitLocalEvent(emitterName: string, localEventName: string) {
 	return (target: any, propertyKey: string) => {
@@ -46,6 +59,10 @@ export function HandleEvent(emitterPropertyName: string, eventClassName: string)
 	return Reflect.metadata(LOCAL_EVENT_HANDLER, { emitterPropertyName, eventClassName });
 }
 
+export function getObjectEventEmitters(object: any) {
+	return Reflect.getMetadata(OBJECT_EVENT_EMITTER, object);
+}
+
 export function getLocalEventEmitters(object: any) {
 	return Reflect.getMetadata(LOCAL_EVENT_EMITTER, object);
 }
@@ -55,7 +72,9 @@ export function getHandledEventBounds(object: any, sign: symbol): EventBound[] {
 	const bounds: EventBound[] = [];
 	for (const method of methods) {
 		const metadata = Reflect.getMetadata(sign, object, method);
-		if (metadata !== undefined) bounds.push({ bindToMethod: object[method], ...metadata });
+		if (metadata !== undefined){
+			bounds.push({ bindToMethod: object[method], ...metadata });
+		}
 	}
 	return bounds;
 }
@@ -105,10 +124,12 @@ export class GameEventEmitter<T extends Record<string, any> = any> extends Typed
 }
 
 function getAllMethodsOfObject(object: any) {
-	const prototype = Object.getPrototypeOf(object);
-	return Object.getOwnPropertyNames(prototype).filter(function (property) {
-		return typeof object[property] == 'function';
-	});
+    let properties = new Set<string>()
+    let currentObj = object
+    do {
+      Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
+    } while ((currentObj = Object.getPrototypeOf(currentObj)))
+    return [...properties.keys()].filter(item => typeof object[item] === 'function');
 }
 
 function nextTick(fn: (...args: any[]) => any) {

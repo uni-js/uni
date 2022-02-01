@@ -1,5 +1,5 @@
 import { ObjectStore, HashItem } from './object-store';
-import { GameEventEmitter } from '@uni.js/event';
+import { GameEventEmitter, getObjectEventEmitters } from '@uni.js/event';
 import { IGameObject } from './game-object';
 
 export abstract class ClientSideManager<E extends Record<string, any> = any> extends GameEventEmitter<E> {
@@ -16,6 +16,15 @@ export class GameObjectManager<T extends IGameObject, E extends Record<string, a
 
 	constructor(private objectStore: ObjectStore<T>) {
 		super();
+		this.initObjectEventEmitters();
+	}
+
+	private initObjectEventEmitters() {
+		const bounds = getObjectEventEmitters(this);
+		if(!bounds) return;
+		for(const bound of bounds){
+			this.redirectObjectEvent(bound.objectEventName);
+		}
 	}
 
 	/**

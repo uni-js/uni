@@ -2,11 +2,11 @@ import React, { useContext, useEffect } from 'react';
 
 import { TextureProvider } from '@uni.js/texture';
 import { injectable } from 'inversify';
-import { EventEmitter2 } from 'eventemitter2';
 import { UIStateContainer, UIStateWithMetaInfo } from './state';
+import { GameEventEmitter } from '@uni.js/event';
 
 @injectable()
-export class UIEventBus extends EventEmitter2 {}
+export class UIEventBus extends GameEventEmitter { }
 
 export type DataSource = UIStateContainer;
 
