@@ -1,7 +1,4 @@
 export * from "./client-app"
-export * from "./client-manager"
-export * from "./client-controller"
 export * from "./object-store"
 export * from "./game-object"
 export * from "./bus-client"
-export * from "./module"

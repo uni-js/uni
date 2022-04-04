@@ -168,7 +168,7 @@ export function HTMLInputPlugin() : UniClientPlugin {
 		const inputProvider = new HTMLInputProvider();
 		inputProvider.bind(mouseElem);
 
-		app.add(HTMLInputProvider, inputProvider)
 		app.addTicker(() => inputProvider.doFixedUpdateTick());
+		return inputProvider;
 	}
 }

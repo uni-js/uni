@@ -8,11 +8,10 @@ const MsgPackParser = require('socket.io-msgpack-parser');
 @injectable()
 export class EventBusClient extends EventEmitter2 {
 	private client;
-	constructor(url: string) {
+	constructor(url: string, msgPacked = true) {
 		super();
 
-		const isDebug = Boolean(process.env['DEBUG']);
-		const option = isDebug ? {} : { parser: MsgPackParser };
+		const option = !msgPacked ? {} : { parser: MsgPackParser };
 
 		this.client = io(url, option);
 		this.client.onAny((event, ...args) => {
@@ -20,11 +19,11 @@ export class EventBusClient extends EventEmitter2 {
 		});
 	}
 
-	emitBusEvent(event: RemoteEvent) {
-		this.emitBusEventByName(event.constructor.name, event);
+	on(eventClassOrName: any, handler: (...args: any[]) => void) {
+		return super.on(eventClassOrName.name || eventClassOrName, handler);
 	}
-
-	emitBusEventByName(eventName: string, eventPayload: any) {
-		this.client.emit(eventName, eventPayload);
+	
+	emitBusEvent(event: RemoteEvent) {
+		this.client.emit(event.constructor.name, event);
 	}
 }

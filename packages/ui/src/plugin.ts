@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { TextureProvider } from "@uni.js/texture";
-import { ClientApp, PluginContext, resolveClientSideModule, UniClientPlugin } from "@uni.js/client"
+import { ClientApp, PluginContext, UniClientPlugin } from "@uni.js/client"
 import { UIStateContainer } from "./state";
 import { UIEventBus, UIEntry } from "./hooks";
 
@@ -28,20 +28,14 @@ function initUIContainer() {
 	return container;
 }
 
-function initStatesContainer(app: ClientApp, uiStateDefs: any[]) {
-	const stateContainer = new UIStateContainer(uiStateDefs);
-	for(const [key,value] of stateContainer.getEntries()) {
-		app.add(key, value);
-	}
-	return stateContainer;
+function initStatesContainer(uiStateDefs: any[]) {
+	return new UIStateContainer(uiStateDefs);
 }
-export function UIPlugin(uiEntry: any) : UniClientPlugin {
+export function UIPlugin(uiEntry: any, uiStates: any[], textureProvider: TextureProvider) : UniClientPlugin {
 	return function (context: PluginContext) {
 		const app = context.app;
-		const resolvedModules = resolveClientSideModule(app.getOption().module);
-		const textureProvider = app.get(TextureProvider);
 		
-		const stateContainer = initStatesContainer(app, resolvedModules.uiStates);
+		const stateContainer = initStatesContainer(uiStates);
 		const uiContainer = initUIContainer();
 		const eventBus = new UIEventBus();
 
@@ -50,13 +44,11 @@ export function UIPlugin(uiEntry: any) : UniClientPlugin {
 			remove: (tickerFn: any) => app.removeTicker(tickerFn)
 		}
 
-		app.add(UIStateContainer, stateContainer);
-		app.add(UIEventBus, eventBus);
-
-
 		app.addCoverElement(uiContainer);
 		app.on("start", () => {
 			renderUI(uiContainer, uiEntry, ticker, stateContainer, eventBus, textureProvider);
 		})
+
+		return { uiStates: stateContainer, uiEventBus: eventBus };
 	}
 }

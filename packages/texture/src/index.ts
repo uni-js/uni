@@ -137,6 +137,6 @@ export function TexturePlugin(option: TexturePluginOption) : UniClientPlugin {
 			await loader.import(module);
 		}
 
-		app.add(TextureProvider, textureProvider);
+		return textureProvider;
 	}
 }

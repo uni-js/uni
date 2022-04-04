@@ -55,10 +55,7 @@ export function ViewportPlugin(option: ViewportPluginOption): UniClientPlugin {
 		if(option.mouseElem){
 			viewportEventDispatcher.bind(option.mouseElem);		
 		}
-
-		app.add(Viewport, viewport);
-		app.add(ViewportHTMLEventDispatcher, viewportEventDispatcher);
-
+		
 		app.on("start", () => {
 			if(option.initLayers){
 				for(const layer of option.initLayers){
@@ -68,5 +65,7 @@ export function ViewportPlugin(option: ViewportPluginOption): UniClientPlugin {
 
 			app.addDisplayObject(viewport);
 		})
+
+		return { viewport, viewportEventDispatcher }
 	}
 }

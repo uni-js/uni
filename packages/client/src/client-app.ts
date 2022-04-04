@@ -3,11 +3,6 @@ import * as PIXI from 'pixi.js';
 import { EventEmitter2 as EventEmitter } from "eventemitter2"
 
 import { EventBusClient } from './bus-client';
-import { Container, interfaces } from 'inversify';
-import { bindToContainer, resolveAllBindings } from './inversify';
-
-import { ClientModuleResolvedResult, ClientSideModule, resolveClientSideModule } from './module';
-import { Logger } from '@uni.js/utils';
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 PIXI.settings.SORTABLE_CHILDREN = true;
@@ -24,7 +19,8 @@ export interface ClientApplicationOption {
 	width: number;
 	height: number;
 	resolution: number;
-	module: ClientSideModule;
+	msgPacked?: boolean;
+	[key: string]: any;
 }
 
 export function wait(time: number) {
@@ -32,17 +28,9 @@ export function wait(time: number) {
 }
 
 export class ClientApp extends EventEmitter{
-	private updateTick = 0;
-	private fixedTick = 0;
-
 	private app: PIXI.Application;
 
-	private managers: any[] = [];
-	private controllers: any[] = [];
-
 	private busClient: EventBusClient;
-
-	private ioc: Container;
 
 	private wrapper: HTMLElement;
 	private coverContainer: HTMLElement;
@@ -50,12 +38,8 @@ export class ClientApp extends EventEmitter{
 
 	private playground: HTMLElement;
 
-	private moduleResolved: ClientModuleResolvedResult;
-
 	constructor(private option: ClientApplicationOption) {
 		super();
-
-		this.moduleResolved = resolveClientSideModule(option.module);
 
 		this.app = new PIXI.Application({
 			width: option.width,
@@ -65,17 +49,15 @@ export class ClientApp extends EventEmitter{
 
 		this.playground = option.playground;
 
-		this.ioc = new Container({ skipBaseClassChecks: true });
+		this.busClient = new EventBusClient(this.option.serverUrl, this.option.msgPacked === undefined ? true : this.option.msgPacked);
 
-		this.managers = this.moduleResolved.managers;
-		this.controllers = this.moduleResolved.controllers;
-
-		this.busClient = new EventBusClient(this.option.serverUrl);
-
-		this.initProviderBindings();
 		this.initWrapper();
 		this.initCanvasContainer();
 		this.initCoverContainer();
+	}
+
+	getBusClient() {
+		return this.busClient;
 	}
 
 	getOption() {
@@ -89,21 +71,13 @@ export class ClientApp extends EventEmitter{
 	getCanvasContainer() {
 		return this.canvasContainer;
 	}
-	
-	add(key: any, value: any) {
-		this.ioc.bind(key).toConstantValue(value);
-	}
-
-	get<T>(identifier: interfaces.ServiceIdentifier<T>) {
-		return this.ioc.get(identifier);
-	}
 
 	async use(plugin: UniClientPlugin) {
 		const context: PluginContext = {
 			app: this
 		}
 
-		await plugin(context);
+		return await plugin(context);
 	}
  
 	addTicker(fn: any) {
@@ -134,16 +108,9 @@ export class ClientApp extends EventEmitter{
 	}
 
 	async start() {
-		this.emit("beforestart");
-		this.initBaseBindings();
-
-		resolveAllBindings(this.ioc, this.managers);
-		resolveAllBindings(this.ioc, this.controllers);
-
+		this.emit("prestart")
 		this.app.start();
-
-		this.startLoop();
-		this.emit("start");
+		this.emit("start")
 	}
 
 	private initWrapper() {
@@ -178,46 +145,5 @@ export class ClientApp extends EventEmitter{
 
 		this.wrapper.appendChild(coverContainer);
 		this.coverContainer = coverContainer;
-	}
-
-	private initProviderBindings() {
-		for (const provider of this.moduleResolved.providers) {
-			this.ioc.bind(provider.key).toConstantValue(provider.value);
-		}
-	}
-
-	private initBaseBindings() {
-		this.ioc.bind(EventBusClient).toConstantValue(this.busClient);
-
-		bindToContainer(this.ioc, [...this.managers, ...this.controllers]);
-	}
-
-	private doUpdateTick() {
-		try {
-			for (const manager of this.managers) {
-				this.ioc.get<any>(manager).doUpdateTick(this.updateTick);
-			}
-		} catch (err: any) {
-			Logger.error(err.stack);
-		}
-
-		this.updateTick += 1;
-	}
-
-	private doFixedUpdateTick() {
-		try {
-			for (const manager of this.managers) {
-				this.ioc.get<any>(manager).doFixedUpdateTick(this.fixedTick);
-			}
-		} catch (err: any) {
-			Logger.error(err.stack);
-		}
-
-		this.fixedTick += 1;
-	}
-
-	private startLoop() {
-		this.app.ticker.add(this.doUpdateTick.bind(this));
-		this.app.ticker.add(this.doFixedUpdateTick.bind(this));
 	}
 }
