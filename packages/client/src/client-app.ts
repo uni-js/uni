@@ -116,8 +116,6 @@ export class ClientApp extends EventEmitter{
 	private initWrapper() {
 		const wrapper = document.createElement('div');
 		wrapper.classList.add('uni-wrapper');
-		wrapper.style.width = `${this.app.view.width}px`;
-		wrapper.style.height = `${this.app.view.height}px`;
 		wrapper.style.position = 'relative';
 
 		this.playground.appendChild(wrapper);
@@ -125,6 +123,9 @@ export class ClientApp extends EventEmitter{
 	}
 
 	private initCanvasContainer() {
+		this.app.view.style.width = "100%";
+		this.app.view.style.height = "100%";
+		
 		const canvasContainer = document.createElement('div');
 		canvasContainer.classList.add('uni-canvas-container');
 		canvasContainer.append(this.app.view);
