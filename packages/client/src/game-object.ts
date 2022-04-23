@@ -6,7 +6,7 @@ export interface IGameObject extends PIXI.DisplayObject {
 	getLocalId(): number;
 	getServerId(): number;
 	doUpdateTick(tick: number): void;
-	doFixedUpdateTick(tick: number): void;
+	doTick(tick: number): void;
 }
 
 export class GameObject extends PIXI.Container implements IGameObject {
@@ -37,5 +37,5 @@ export class GameObject extends PIXI.Container implements IGameObject {
 	}
 
 	doUpdateTick(tick: number): void {}
-	doFixedUpdateTick(tick: number): void {}
+	doTick(tick: number): void {}
 }

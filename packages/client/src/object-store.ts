@@ -8,10 +8,12 @@ export type HashItem = string | number;
 export type Hasher<T> = (item: T) => HashItem[] | HashItem[][];
 
 export class ObjectStore<T extends PIXI.DisplayObject> {
-	public readonly container = new PIXI.Container();
+	public container: PIXI.Container;
 	private store = new Map<string, T>();
 
-	constructor(private initHasher?: Hasher<T>) {}
+	constructor(private initHasher: Hasher<T>, container?: PIXI.Container) {
+		this.container = container || new PIXI.Container();
+	}
 
 	add(item: T) {
 		const hashes = this.getHashStrings(item);

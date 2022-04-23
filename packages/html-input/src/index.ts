@@ -38,7 +38,7 @@ export interface InputProvider {
 	keyDown(key: InputKey): boolean;
 	cursorPress(): boolean;
 	getCursorAt(): Vector2;
-	doFixedUpdateTick(tick: number): void;
+	doTick(tick: number): void;
 }
 
 export class HTMLInputProvider implements InputProvider {
@@ -154,7 +154,7 @@ export class HTMLInputProvider implements InputProvider {
 		this.actions = newActions;
 	}
 
-	doFixedUpdateTick(): void {
+	doTick(): void {
 		this.consumeActions();
 		this.tick++;
 	}
@@ -168,7 +168,7 @@ export function HTMLInputPlugin() : UniClientPlugin {
 		const inputProvider = new HTMLInputProvider();
 		inputProvider.bind(mouseElem);
 
-		app.addTicker(() => inputProvider.doFixedUpdateTick());
+		app.addTicker(() => inputProvider.doTick());
 		return inputProvider;
 	}
 }
